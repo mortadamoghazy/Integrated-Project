@@ -77,11 +77,7 @@ def fill_simplified_table():
 
     sh_src = wb.sheets["Feuil1"]
     sh_tgt1 = wb.sheets["Sheet1"]
-    try:
-        sh_tgt2 = wb.sheets["Sheet2"]
-    except Exception:
-        # Create Sheet2 if it doesn't exist
-        sh_tgt2 = wb.sheets.add("Sheet2")
+ 
 
     print("Connected workbook:", wb.name)
     print("Full path:", wb.fullname)
@@ -250,8 +246,7 @@ def fill_simplified_table():
     print("✏️ Writing data to Sheet1...")
     write_to_sheet(sh_tgt1)
 
-    print("✏️ Writing data to Sheet2...")
-    write_to_sheet(sh_tgt2)
+
 
     wb.save()
     wb.app.calculate()
