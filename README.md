@@ -1,52 +1,57 @@
-# Integrated-Project
-Integrated Project – Excel Automation Tool
-
-This project is part of the ENS3 MARS / ASI Integrated Project, supervised by Bogdan Robu (GIPSA-lab).
-The goal is to build an interactive tool to help NGOs and small organizations manage:
-
-Salary costs
-
-Contributions
-
-Project involvement
-
-Monthly/annual budgeting
-
-Scenario simulation
-
-Reporting and forecasting
-
-This repository contains the first complete working block of the project:
-💡 Extract payroll data from Feuil1 and automatically populate structured tables in Sheet1 from Excel using Python.
-
-_____________________________________________________________________________________________________
-
-1. Full Excel → Python automation
-
-A button inside Excel (Sheet2) launches a Python script using VBA.
-This script:
-
-Opens the workbook
-
-Reads raw payroll data from Feuil1
-
-Extracts salaries, contributions, benefits, and PAS
-
-Normalizes labels
-
-Matches fields to Sheet1
-
-Fills Sheet1 automatically
-
-Highlights all filled cells (yellow + bold)
-
-This pipeline is now fully working.
-
-_____________________________________________________________________________________________________
-
-2.Sheet2 filling disabled
-
-Data is now written only to Sheet1, by request.
-
-_____________________________________________________________________________________________________
-3. No GUI yet
+Integrated Project/
+│
+├── scripts/
+│   ├── run_excel.py         # Entry point for automation + mapping GUI
+│   └── run_plot.py          # Entry point for field-value plotting GUI
+│
+├── src/
+│   ├── __init__.py
+│   │
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── config.py        # Central paths, sheet names, project constants
+│   │   ├── normalization.py # For normalizing labels and employee IDs
+│   │   └── data_loader.py   # ***Central dynamic data extractor***
+│   │                         # Scans Feuil1 for labels & dynamic employee blocks
+│   │                         # Scans Sheet1 for headers & IDs
+│   │                         # Provides robust, reusable extraction API
+│   │
+│   ├── features/
+│   │   ├── __init__.py
+│   │   │
+│   │   ├── payroll_processing/
+│   │   │   ├── __init__.py
+│   │   │   ├── automation.py       # Uses data_loader to extract Feuil1 records
+│   │   │   │                       # Fills Sheet1 and Sheet2 with payroll data
+│   │   │   └── mapping_engine.py   # Uses data_loader to read Feuil1 rows + employee blocks
+│   │   │                            # Applies user-defined mappings
+│   │   │
+│   │   ├── gui/
+│   │   │   ├── __init__.py
+│   │   │   └── excel_gui_launcher.py
+│   │   │        # Orchestrates:
+│   │   │        # 1. fill_simplified_table()
+│   │   │        # 2. apply_saved_mappings()
+│   │   │        # 3. GUI for creating custom mappings
+│   │   │
+│   │   ├── analytics/
+│   │   │   ├── __init__.py
+│   │   │   ├── plotting_gui.py     # GUI for selecting field to plot
+│   │   │   └── plot_salary_field.py# Uses data_loader to extract field series
+│   │   │                            # Draws colored bar graph + average line
+│
+├── data/
+│   ├── raw/
+│   │   └── Pay employier sept25.xlsm  # Controlled input
+│   └── processed/                      # Future processed outputs
+│
+├── docs/
+│   └── project_description.pdf        # Fiche projet
+│
+├── tests/
+│   ├── test_data_loader.py            # (optional future tests)
+│   ├── test_mapping.py
+│   └── test_automation.py
+│
+├── README.md
+└── requirements.txt
