@@ -26,7 +26,7 @@ def plot_field(wb: xw.Book, field_label: str):
     emp_ids = [str(e) for e in emp_ids]
 
     # Read field values
-    values = sh.range((2, col_index + 1)).expand("down").value
+    values = sh.range((2, col_index )).expand("down").value
     if not isinstance(values, list):
         values = [values]
 

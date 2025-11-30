@@ -34,10 +34,6 @@ def fill_simplified_table():
             wb = app.books.open(PAYROLL_FILE)
 
     sh_tgt1 = wb.sheets[TGT_SHEET]
-    try:
-        sh_tgt2 = wb.sheets["Sheet2"]
-    except Exception:
-        sh_tgt2 = wb.sheets.add("Sheet2")
 
     print("Connected workbook:", wb.name)
     print("Full path:", wb.fullname)
@@ -88,12 +84,10 @@ def fill_simplified_table():
     print("✏️ Writing data to Sheet1...")
     write_to_sheet(sh_tgt1)
 
-    print("✏️ Writing data to Sheet2...")
-    write_to_sheet(sh_tgt2)
 
     wb.save()
     wb.app.calculate()
-    xw.apps.active.api.StatusBar = "✅ Data written successfully to Sheet1 and Sheet2."
+    xw.apps.active.api.StatusBar = "✅ Data written successfully to Sheet1."
     print("✅ Done — data transferred and workbook saved.")
 
 

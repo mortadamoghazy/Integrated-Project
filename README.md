@@ -55,3 +55,51 @@ Integrated Project/
 │
 ├── README.md
 └── requirements.txt
+_______________________________________________________________________________________________________________________________
+Excel Button (Plot Field Values)
+      │
+      ▼
+VBA: PlotButtonHandler()
+      │
+      ▼
+python scripts/run_plot.py
+      │
+      ▼
+analytics.plotting_gui.main()
+      │
+      ▼
+User selects field
+      │
+      ▼
+plot_salary_field.plot_field()
+      ├── data_loader.get_field_series_from_sheet1()
+      ├── matplotlib bar graph
+      ├── average line
+      ├── color coding: red/blue
+      └── annotation of +/– differences
+______________________________________________________________________________________________________________________________
+Excel Button (Run Processing)
+      │
+      ▼
+VBA: RunProcessButtonHandler()
+      │
+      ▼
+python scripts/run_excel.py
+      │
+      ▼
+excel_gui_launcher.main()
+      ├── fill_simplified_table()
+      │       ├── data_loader.get_sheet1_meta()
+      │       ├── data_loader.extract_feuil1_records()
+      │       └── writes data to Sheet1 + Sheet2
+      │
+      ├── apply_saved_mappings()
+      │       ├── mapping_engine.load_saved_mappings()
+      │       ├── data_loader.get_feuil1_rows_info()
+      │       ├── data_loader.get_employee_layout_and_sheet1()
+      │       └── mapping_engine.apply_single_mapping()
+      │
+      └── show_mapping_gui()
+              ├── Lets user define a mapping
+              ├── mapping_engine.apply_single_mapping()
+              └── mapping_engine.save_or_update_mapping_row()
