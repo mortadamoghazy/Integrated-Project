@@ -103,3 +103,11 @@ excel_gui_launcher.main()
               ├── Lets user define a mapping
               ├── mapping_engine.apply_single_mapping()
               └── mapping_engine.save_or_update_mapping_row()
+_______________________________________________________________________________________________________
+“Source of Data” Section (ready to copy/paste)
+
+All payroll data used in this project is synthetic and was generated using a probabilistic payroll simulation model.
+The model assigns each synthetic employee to a role (intern, junior, mid-level, senior, manager), applies realistic salary ranges and growth rates, and incorporates random noise and occasional bonuses.
+Payroll fields such as cotisations, net imposable, PAS, and net payé are computed using simplified formula-based models inspired by public payroll structures.
+No real employee information is used.
+The dataset is reproducible and created solely for the purpose of regression analysis, forecasting, and tool development.
