@@ -1,156 +1,180 @@
-import numpy as np
+"""
+Visualization of All Regression Models
+
+Fixes:
+- Employee ID mismatch (int vs padded str)
+- Empty plot for employee 00001
+- Automatic detection of available employees
+- Consistent ID formatting
+"""
+
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.kernel_ridge import KernelRidge
-from sklearn.linear_model import RidgeCV
-from sklearn.model_selection import GridSearchCV, train_test_split
-from sklearn.metrics import mean_squared_error
+import os
 
-# -------------------------------------------------------
-#               MODEL DEFINITIONS
-# -------------------------------------------------------
-
-def generate_model_signal(model, n=1000, sigma=0.1, mu=None, seed=111):
-    rng = np.random.RandomState(seed)
-    d = rng.rand(n) * sigma
-    e = rng.randn(n)
-
-    if model == 1:
-        # Linear AR(2)
-        for i in range(10, n):
-            d[i] = 0.7*d[i-1] - 0.8*d[i-2] + e[i]*sigma
-
-    elif model == 2:
-        # Nonlinear AR(2)
-        for i in range(10, n):
-            d[i] = (0.7*d[i-1] - 0.8*d[i-2]
-                    -0.7*d[i-1]**2 -0.6*d[i-2]**2 +0.5*d[i-1]*d[i-2]
-                    + e[i]*sigma)
-
-    elif model == 3:
-        # Logistic map
-        if mu is None:
-            raise ValueError("Model 3 requires μ.")
-        for i in range(10, n):
-            d[i] = mu * d[i-1] * (1 - d[i-1])
-
-    return d, e
+OUTPUTS = "outputs/"
 
 
-# -------------------------------------------------------
-#       BUILD AR DESIGN MATRIX FOR GIVEN p AND k=1
-# -------------------------------------------------------
-
-def build_AR_matrix(x, p):
-    n = len(x)
-    k = 1
-    X = np.zeros((n-p-k+1, p))
-    ind = np.arange(p)
-    for i in range(n-p-k+1):
-        X[i,:] = x[ind]
-        ind += 1
-    y = x[p+k-1 : n]
-    return X, y
+# ------------------------------------------------------------
+# Helper: Normalize employee IDs to zero-padded strings
+# ------------------------------------------------------------
+def normalize_emp_id(df):
+    df["employee_id"] = (
+        df["employee_id"]
+        .astype(str)
+        .str.replace(".0", "", regex=False)   # In case CSV had floats
+        .str.zfill(5)
+    )
+    return df
 
 
-# -------------------------------------------------------
-# Hyperparameter grid
-# -------------------------------------------------------
+# ------------------------------------------------------------
+# Load all CSV results (metrics)
+# ------------------------------------------------------------
+def load_metrics():
+    files = {
+        "Trend + Seasonality (Fourier K1)": "results_fourier_k1_emp_metrics.csv",
+        "AR(1)": "results_ar1_emp_metrics.csv",
+        "Pooled FE": "results_pooled_fe_emp_metrics.csv",
+        "Ridge": "results_regularized_panel_ridge_emp_metrics.csv",
+        "Lasso": "results_regularized_panel_lasso_emp_metrics.csv",
+    }
 
-alpha_grid = np.logspace(-6, -1, 6)
-gamma_grid = np.logspace(-9, 3, 13)
+    metrics = {}
+    for model, filename in files.items():
+        path = os.path.join(OUTPUTS, filename)
+        df = pd.read_csv(path)
+        df = normalize_emp_id(df)
+        metrics[model] = df
 
-param_grid = {"alpha": alpha_grid, "gamma": gamma_grid}
-
-kernels = ["rbf", "laplacian", "poly"]
-p_values = [1, 2, 5]
-mu_values = [1, 2, 4]   # used only for model 3
-
-
-# -------------------------------------------------------
-# STORAGE
-# -------------------------------------------------------
-
-results = []
-
-
-# -------------------------------------------------------
-# MAIN LOOP
-# -------------------------------------------------------
-
-for model_idx in [1, 2, 3]:      # linear, nonlinear, logistic
-    for p in p_values:
-        for mu in (mu_values if model_idx == 3 else [None]):
-
-            # Display progress -------------------------------------------------
-            print(f"\n=== Running Model {model_idx}, p={p}, mu={mu} ===")
-
-            # Generate signal
-            d, e = generate_model_signal(model_idx, mu=mu)
-
-            # Build AR regressors
-            X, y = build_AR_matrix(d, p)
-
-            # Train-test split
-            X_train, X_test, y_train, y_test = train_test_split(
-                X, y, test_size=0.20, shuffle=False, random_state=2
-            )
-
-            # Linear ridge baseline (for reference)
-            lin = RidgeCV(alphas=alpha_grid, cv=5)
-            lin.fit(X_train, y_train)
-            y_pred_lin = lin.predict(X_test)
-            rmse_test_lin = np.sqrt(mean_squared_error(y_test, y_pred_lin))
-            nrmse_test_lin = rmse_test_lin / 0.1  # sigma = 0.1
-
-            # Loop over kernels
-            for ker in kernels:
-                print(f"   -> Kernel = {ker} ... running grid search")
-
-                clf = GridSearchCV(
-                    KernelRidge(kernel=ker),
-                    param_grid=param_grid,
-                    cv=5,
-                    return_train_score=False
-                )
-
-                clf.fit(X_train, y_train)
-
-                # Best model predictions
-                y_train_hat = clf.predict(X_train)
-                y_test_hat = clf.predict(X_test)
-
-                # RMSE
-                rmse_train = np.sqrt(mean_squared_error(y_train, y_train_hat))
-                rmse_test  = np.sqrt(mean_squared_error(y_test,  y_test_hat))
-
-                # Normalized RMSE
-                nrmse_train = rmse_train / 0.1
-                nrmse_test  = rmse_test  / 0.1
-
-                # Store
-                results.append({
-                    "Model": ["Model 1 (Linear AR)",
-                              "Model 2 (Nonlinear AR)",
-                              "Model 3 (Logistic)"][model_idx-1],
-                    "p": p,
-                    "mu": mu,
-                    "Kernel": ker,
-                    "Best α": clf.best_params_['alpha'],
-                    "Best γ": clf.best_params_['gamma'],
-                    "KRR Train NRMSE": nrmse_train,
-                    "KRR Test NRMSE": nrmse_test,
-                    "Linear Test NRMSE": nrmse_test_lin
-                })
+    return metrics
 
 
-# -------------------------------------------------------
-# FINAL TABLE
-# -------------------------------------------------------
+# ------------------------------------------------------------
+# Load all prediction files for time-series plotting
+# ------------------------------------------------------------
+def load_predictions():
+    files = {
+        "Fourier": "results_fourier_k1_predictions.csv",
+        "AR1": "results_ar1_predictions.csv",
+        "PooledFE": "results_pooled_fe_predictions.csv",
+        "RidgeLasso": "results_regularized_panel_predictions.csv",
+    }
 
-df = pd.DataFrame(results)
-print("\n\n=== FINAL RESULTS TABLE (Normalized RMSE) ===\n")
-print(df)
+    preds = {}
+    for model, filename in files.items():
+        path = os.path.join(OUTPUTS, filename)
+        df = pd.read_csv(path)
+        df = normalize_emp_id(df)
+        df["month"] = pd.to_datetime(df["month"])
+        preds[model] = df
 
-# Save table as CSV if needed
-df.to_csv("final_results_nrmse.csv", index=False)
+    return preds
+
+
+# ------------------------------------------------------------
+# Global Comparison Plots
+# ------------------------------------------------------------
+def plot_global_comparison(metrics):
+    summary = []
+
+    for model, df in metrics.items():
+        summary.append([
+            model,
+            df["rmse"].mean(),
+            df["mae"].mean(),
+            df["mape"].mean(),
+            df["r2"].mean(),
+        ])
+
+    summary_df = pd.DataFrame(summary, columns=["Model", "RMSE", "MAE", "MAPE", "R2"])
+    summary_df = summary_df.set_index("Model")
+
+    # Global Error Comparison
+    summary_df[["RMSE", "MAE", "MAPE"]].plot(kind="bar", figsize=(12,6))
+    plt.title("Global Error Comparison Across Models")
+    plt.ylabel("Error Value")
+    plt.grid(axis="y", linestyle="--", alpha=0.6)
+    plt.tight_layout()
+    plt.show()
+
+    # Global R² Comparison
+    summary_df["R2"].plot(kind="bar", figsize=(10,5), color="green")
+    plt.title("Global R² Comparison Across Models")
+    plt.ylabel("R² Value")
+    plt.grid(axis="y", linestyle="--", alpha=0.6)
+    plt.tight_layout()
+    plt.show()
+
+
+# ------------------------------------------------------------
+# Per-Employee Comparison Plot
+# ------------------------------------------------------------
+def plot_per_employee_rmse(metrics):
+    all_emp_ids = sorted(metrics["AR(1)"]["employee_id"].unique())
+    rmse_df = pd.DataFrame(index=all_emp_ids)
+
+    for model, df in metrics.items():
+        rmse_df[model] = df.set_index("employee_id")["rmse"]
+
+    rmse_df.plot(figsize=(14,7))
+    plt.title("Per-Employee RMSE Comparison")
+    plt.xlabel("Employee ID")
+    plt.ylabel("RMSE")
+    plt.grid(True, linestyle="--", alpha=0.5)
+    plt.tight_layout()
+    plt.show()
+
+
+# ------------------------------------------------------------
+# True vs Predicted for One Employee
+# ------------------------------------------------------------
+def plot_example_employee(preds, emp_id="00001"):
+    # Detect available employee IDs
+    available_ids = preds["Fourier"]["employee_id"].unique()
+
+    if emp_id not in available_ids:
+        print(f"WARNING: employee_id={emp_id} not found. Using first available: {available_ids[0]}")
+        emp_id = available_ids[0]
+
+    f = preds["Fourier"][preds["Fourier"]["employee_id"] == emp_id]
+    a = preds["AR1"][preds["AR1"]["employee_id"] == emp_id]
+    e = preds["PooledFE"][preds["PooledFE"]["employee_id"] == emp_id]
+    r = preds["RidgeLasso"][preds["RidgeLasso"]["employee_id"] == emp_id]
+
+    plt.figure(figsize=(12,6))
+
+    plt.plot(f["month"], f["y_true"], label="True Salary", linewidth=3, color="black")
+    plt.plot(f["month"], f["y_pred"], label="Fourier (K1)", linestyle="--")
+    plt.plot(a["month"], a["y_pred"], label="AR(1)", linestyle="--")
+    plt.plot(e["month"], e["y_pred"], label="Pooled FE", linestyle="--")
+    plt.plot(r["month"], r["y_pred_ridge"], label="Ridge", linestyle="--")
+    plt.plot(r["month"], r["y_pred_lasso"], label="Lasso", linestyle="--")
+
+    plt.title(f"True vs Predicted Salary for Employee {emp_id}")
+    plt.xlabel("Month")
+    plt.ylabel("Salaire Brut (EUR)")
+    plt.grid(True, linestyle="--", alpha=0.5)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+# ------------------------------------------------------------
+# MAIN
+# ------------------------------------------------------------
+if __name__ == "__main__":
+    metrics = load_metrics()
+    preds = load_predictions()
+
+    print("Plotting global comparison...")
+    plot_global_comparison(metrics)
+
+    print("Plotting per-employee RMSE comparison...")
+    plot_per_employee_rmse(metrics)
+
+    print("Plotting example employee forecast...")
+    plot_example_employee(preds, emp_id="00001")
+
+    print("All visualizations completed.")
