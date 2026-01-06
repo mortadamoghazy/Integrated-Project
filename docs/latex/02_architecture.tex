@@ -1,0 +1,427 @@
+\chapter{System Architecture}
+
+\section{Module Organization}
+
+The system is organized into distinct modules with clear responsibilities and minimal coupling.
+
+\subsection{Core Modules}
+
+\subsubsection{src/core/config.py}
+
+\textbf{Purpose:} Centralized configuration management
+
+\textbf{Key Components:}
+\begin{itemize}
+    \item Project root path determination
+    \item Data directory paths
+    \item Default parameters
+\end{itemize}
+
+\begin{lstlisting}[style=pythonstyle, caption=Configuration Module Structure]
+from pathlib import Path
+
+# Determine project root
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+
+# Data paths
+DATA_RAW = PROJECT_ROOT / "data" / "raw"
+DATA_OUTPUTS = PROJECT_ROOT / "outputs"
+
+# Default parameters
+DEFAULT_ID_ROW = 7
+DEFAULT_CODE_COL = 0
+DEFAULT_LABEL_COL = 2
+\end{lstlisting}
+
+\subsubsection{src/core/normalization.py}
+
+\textbf{Purpose:} String normalization for consistent matching
+
+\textbf{Key Functions:}
+\begin{itemize}
+    \item \texttt{\_norm\_label(s: str) -> str}: Normalize column labels
+    \item \texttt{\_norm\_emp\_id(s: str) -> str}: Normalize employee IDs
+\end{itemize}
+
+\textbf{Normalization Rules:}
+\begin{enumerate}
+    \item Convert to lowercase
+    \item Remove accents and diacritics
+    \item Strip whitespace
+    \item Remove special characters
+    \item Replace hyphens/underscores with spaces
+\end{enumerate}
+
+\begin{lstlisting}[style=pythonstyle, caption=Normalization Function]
+import unicodedata
+import re
+
+def _norm_label(s: str) -> str:
+    """Normalize label for consistent matching."""
+    if not s:
+        return ""
+    # Convert to string and lowercase
+    s = str(s).lower().strip()
+    # Remove accents
+    s = unicodedata.normalize('NFKD', s)
+    s = s.encode('ascii', 'ignore').decode('ascii')
+    # Remove special chars
+    s = re.sub(r'[^a-z0-9\s]', '', s)
+    # Collapse whitespace
+    s = re.sub(r'\s+', ' ', s).strip()
+    return s
+\end{lstlisting}
+
+\textbf{Why Normalization Matters:}
+
+Excel files from different sources may have inconsistent labeling:
+\begin{itemize}
+    \item "Salaire Brut" vs "salaire\_brut" vs "SALAIRE BRUT"
+    \item "Cotisation Salariale" vs "cot. salariale"
+    \item Employee IDs: "EMP-001" vs "EMP001" vs "emp 001"
+\end{itemize}
+
+Normalization ensures these variants match correctly.
+
+\subsection{Data Loading Modules}
+
+\subsubsection{src/core/multi\_sheet\_loader.py}
+
+\textbf{Purpose:} Load synthetic payroll data from Excel multi-sheet structure
+
+\textbf{Key Function:}
+\begin{lstlisting}[style=pythonstyle]
+def load_all_months(
+    workbook_path: str,
+    output_csv: str,
+    month_regex: str = r"^\d{4}-\d{2}$"
+) -> pd.DataFrame:
+    """
+    Load all month sheets from workbook.
+    
+    Args:
+        workbook_path: Path to Excel workbook
+        output_csv: Path to save consolidated CSV
+        month_regex: Regex pattern for month sheet names
+        
+    Returns:
+        DataFrame with all employee-month records
+    """
+\end{lstlisting}
+
+\textbf{Processing Steps:}
+\begin{enumerate}
+    \item Open workbook with xlwings
+    \item Identify month sheets by regex pattern
+    \item For each month sheet:
+    \begin{itemize}
+        \item Read header row
+        \item Read employee data
+        \item Normalize column names
+        \item Add month column
+    \end{itemize}
+    \item Concatenate all months
+    \item Standardize column order
+    \item Save to CSV
+\end{enumerate}
+
+\subsubsection{tests/mapped\_data\_loader.py}
+
+\textbf{Purpose:} Load real payroll data after mapping
+
+\textbf{Key Differences from multi\_sheet\_loader:}
+\begin{itemize}
+    \item Handles MM format month names (converts to YYYY-MM)
+    \item Inserts role column (for compatibility)
+    \item Reorders columns to match synthetic data
+    \item More defensive error handling
+\end{itemize}
+
+\textbf{Month Format Conversion:}
+\begin{lstlisting}[style=pythonstyle]
+# Detect format
+if df["month"].str.match(r"^\d{2}$").all():
+    # Convert MM to YYYY-MM with base year
+    month_strings = df["month"].astype(str).str.zfill(2)
+    df["month"] = "2025-" + month_strings
+    print("Converted MM format to YYYY-MM (base year 2025)")
+\end{lstlisting}
+
+\subsection{Excel Integration Modules}
+
+\subsubsection{src/excel\_tools/mapping\_utils.py}
+
+\textbf{Purpose:} Shared utilities for mapping operations
+
+\textbf{Key Functions:}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Function} & \textbf{Purpose} \\
+\midrule
+\texttt{ensure\_custom\_sheet} & Create or retrieve CustomMap sheet \\
+\texttt{serialize\_keys\_ops} & Convert formula list to storage format \\
+\texttt{get\_source\_rows\_display} & Extract displayable source rows \\
+\texttt{save\_mapping\_row} & Save/update mapping in CustomMap \\
+\texttt{get\_month\_sheets} & Identify month sheets by regex \\
+\bottomrule
+\end{tabularx}
+\caption{Mapping Utility Functions}
+\end{table}
+
+\textbf{Storage Format:}
+
+Mappings are stored in CustomMap sheet as:
+\begin{lstlisting}
+Destination_Label | Mapping_Type | KeysOps
+salaire_brut      | formula      | +::SALAIRE_BASE::label;;+::PRIME::label
+\end{lstlisting}
+
+This serialized format allows:
+\begin{itemize}
+    \item Persistence across sessions
+    \item Easy parsing and reconstruction
+    \item Support for complex multi-term formulas
+\end{itemize}
+
+\subsubsection{src/excel\_tools/import\_dialog.py}
+
+\textbf{Purpose:} Main entry point for Excel import workflow
+
+\textbf{Responsibilities:}
+\begin{enumerate}
+    \item File selection dialog
+    \item Launch mapping GUI
+    \item Apply mappings automatically
+    \item Generate CSV
+    \item Handle errors gracefully
+\end{enumerate}
+
+\textbf{Workflow:}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=1.2cm,
+    startstop/.style={rectangle, rounded corners, draw, fill=red!20, text width=3cm, align=center, minimum height=1cm},
+    process/.style={rectangle, draw, fill=blue!20, text width=3.5cm, align=center, minimum height=1cm},
+    decision/.style={diamond, draw, fill=green!20, text width=2.5cm, align=center, aspect=2},
+    arrow/.style={->, >=stealth, thick}
+]
+
+\node[startstop] (start) {Start};
+\node[process, below of=start] (load) {Load data/raw/*.xlsx files};
+\node[process, below of=load] (display) {Display file list};
+\node[decision, below of=display] (select) {File selected?};
+\node[process, below of=select, yshift=-0.5cm] (check) {Check data\_sorted.xlsx};
+\node[decision, below of=check] (exists) {Exists?};
+\node[process, left of=exists, xshift=-2cm] (create) {Create new workbook};
+\node[process, right of=exists, xshift=2cm] (open) {Open existing};
+\node[process, below of=exists, yshift=-1cm] (gui) {Launch mapping GUI};
+\node[process, below of=gui] (apply) {Apply mappings};
+\node[process, below of=apply] (save) {Save to data\_sorted.xlsx};
+\node[process, below of=save] (csv) {Generate CSV};
+\node[startstop, below of=csv] (end) {End};
+
+\draw[arrow] (start) -- (load);
+\draw[arrow] (load) -- (display);
+\draw[arrow] (display) -- (select);
+\draw[arrow] (select) -- node[right] {Yes} (check);
+\draw[arrow] (select) -- node[above] {No} +(-3,0) |- (display);
+\draw[arrow] (check) -- (exists);
+\draw[arrow] (exists) -- node[above] {No} (create);
+\draw[arrow] (exists) -- node[above] {Yes} (open);
+\draw[arrow] (create) |- (gui);
+\draw[arrow] (open) |- (gui);
+\draw[arrow] (gui) -- (apply);
+\draw[arrow] (apply) -- (save);
+\draw[arrow] (save) -- (csv);
+\draw[arrow] (csv) -- (end);
+
+\end{tikzpicture}
+\caption{Import Dialog Workflow}
+\end{figure}
+
+\subsection{Mapping Engine}
+
+\subsubsection{tests/test\_monthly\_mapping\_engine.py}
+
+\textbf{Purpose:} Core mapping calculation engine
+
+\textbf{Key Components:}
+
+\begin{algorithm}[H]
+\caption{Mapping Application Algorithm}
+\begin{algorithmic}[1]
+\State \textbf{Input:} Source sheet, Destination sheet, Mapping rules
+\State \textbf{Output:} Populated destination sheet
+
+\For{each month sheet}
+    \State Detect employee blocks on source
+    \State Build row lookup (code/label $\rightarrow$ row number)
+    \For{each employee}
+        \State Copy employee ID to destination
+        \For{each mapping rule}
+            \State Parse formula (operators and keys)
+            \State Initialize result = 0
+            \For{each term in formula}
+                \State Find source row by key
+                \State Extract value from employee's column
+                \State Apply operator (+, -, *, /)
+                \State Update result
+            \EndFor
+            \State Write result to destination cell
+        \EndFor
+    \EndFor
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\textbf{Formula Parsing:}
+
+Example: \texttt{salaire\_brut = +SALAIRE\_BASE +PRIME -AVANCE}
+
+\begin{enumerate}
+    \item Split by operators: \texttt{["", "SALAIRE\_BASE", "PRIME", "AVANCE"]}
+    \item Extract operators: \texttt{["+", "+", "-"]}
+    \item For each term:
+    \begin{itemize}
+        \item Lookup row: SALAIRE\_BASE $\rightarrow$ row 5
+        \item Get employee column: Employee 1 $\rightarrow$ col C
+        \item Read value: sheet.range("C5").value $\rightarrow$ 5000
+        \item Apply operator: result + 5000
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Analytics Modules}
+
+\subsubsection{src/features/analytics/dashboard\_gui.py}
+
+\textbf{Purpose:} Interactive visualization dashboard
+
+\textbf{Architecture:}
+
+\begin{lstlisting}[style=pythonstyle, caption=Dashboard Class Structure]
+class PayrollDashboard:
+    def __init__(self):
+        self.root = tk.Tk()
+        self.df = None  # Payroll data
+        self.setup_ui()
+        self.load_data()
+    
+    def setup_ui(self):
+        """Create GUI layout with buttons."""
+        # Left panel: plot buttons
+        # Right panel: matplotlib canvas
+    
+    def load_data(self):
+        """Load CSV and validate."""
+    
+    def plot_total_cost_trend(self):
+        """Plot 1: Total cost over time."""
+    
+    # ... 9 more plot methods
+    
+    def run(self):
+        """Start GUI main loop."""
+        self.root.mainloop()
+\end{lstlisting}
+
+\textbf{Plot Generation Pattern:}
+
+Each plot method follows this pattern:
+\begin{enumerate}
+    \item Validate data loaded
+    \item Clear previous plot
+    \item Process data (group, filter, aggregate)
+    \item Create matplotlib figure
+    \item Customize appearance (colors, labels, grid)
+    \item Embed in tkinter canvas
+\end{enumerate}
+
+\section{Data Flow Architecture}
+
+\subsection{Real Data Pipeline}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=1cm,
+    box/.style={rectangle, draw, fill=blue!15, text width=3.5cm, align=center, minimum height=0.8cm, font=\small},
+    arrow/.style={->, >=stealth, thick}
+]
+
+\node[box] (excel) {Excel File \\ (essai donnees paye.xlsx)};
+\node[box, below=of excel] (import) {import\_dialog.py \\ File Selection};
+\node[box, below=of import] (gui) {Mapping GUI \\ Formula Builder};
+\node[box, below=of gui] (custom) {CustomMap Sheet \\ Persistent Storage};
+\node[box, below=of custom] (engine) {Mapping Engine \\ Calculation};
+\node[box, below=of engine] (sorted) {data\_sorted.xlsx \\ Mapped Data};
+\node[box, below=of sorted] (loader) {mapped\_data\_loader.py \\ CSV Conversion};
+\node[box, below=of loader] (csv) {payroll\_mapped\_long.csv};
+
+\draw[arrow] (excel) -- (import);
+\draw[arrow] (import) -- (gui);
+\draw[arrow] (gui) -- (custom);
+\draw[arrow] (custom) -- (engine);
+\draw[arrow] (engine) -- (sorted);
+\draw[arrow] (sorted) -- (loader);
+\draw[arrow] (loader) -- (csv);
+
+\end{tikzpicture}
+\caption{Real Data Processing Pipeline}
+\end{figure}
+
+\subsection{Synthetic Data Pipeline}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=1cm,
+    box/.style={rectangle, draw, fill=green!15, text width=3.5cm, align=center, minimum height=0.8cm, font=\small},
+    arrow/.style={->, >=stealth, thick}
+]
+
+\node[box] (gen) {generate\_synthetic\_payroll.py \\ Data Generation};
+\node[box, below=of gen] (excel) {Synthetic Workbook \\ Multi-sheet Structure};
+\node[box, below=of excel] (loader) {multi\_sheet\_loader.py \\ Direct CSV Conversion};
+\node[box, below=of loader] (csv) {payroll\_long.csv};
+
+\draw[arrow] (gen) -- (excel);
+\draw[arrow] (excel) -- (loader);
+\draw[arrow] (loader) -- (csv);
+
+\end{tikzpicture}
+\caption{Synthetic Data Processing Pipeline}
+\end{figure}
+
+\subsection{Unified Analytics}
+
+Both pipelines produce identical CSV formats, enabling:
+
+\begin{lstlisting}[style=pythonstyle]
+# Load either dataset
+df_real = pd.read_csv("outputs/payroll_mapped_long.csv")
+df_synthetic = pd.read_csv("outputs/payroll_long.csv")
+
+# Same columns, same format
+assert df_real.columns.equals(df_synthetic.columns)
+
+# Same analysis code works on both
+def analyze(df):
+    monthly = df.groupby('month')['total_cost'].sum()
+    return monthly.mean(), monthly.std()
+
+mean_real, std_real = analyze(df_real)
+mean_synth, std_synth = analyze(df_synthetic)
+\end{lstlisting}
+
+This interchangeability allows:
+\begin{itemize}
+    \item Validate methodology on real data
+    \item Run actual analysis on synthetic data
+    \item Compare results between datasets
+    \item Switch datasets without code changes
+\end{itemize}

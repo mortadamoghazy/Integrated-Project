@@ -1,0 +1,551 @@
+\chapter{Usage Guide}
+
+\section{Getting Started}
+
+\subsection{Prerequisites}
+
+\textbf{Required Software:}
+\begin{itemize}
+    \item Microsoft Excel (2016 or later)
+    \item Python 3.10+
+    \item Git (for version control)
+\end{itemize}
+
+\textbf{Required Python Packages:}
+\begin{lstlisting}[style=pythonstyle]
+# Install via pip
+pip install pandas numpy matplotlib xlwings statsmodels
+\end{lstlisting}
+
+\subsection{Project Setup}
+
+\begin{enumerate}
+    \item Clone or download project to local directory
+    \item Update paths in \texttt{Control\_Panel\_New.xlsm} VBA:
+    \begin{lstlisting}[style=vbastyle]
+Const PYTHON_PATH As String = "C:\Path\To\Python\python.exe"
+Const PROJECT_PATH As String = "C:\Path\To\Project\"
+    \end{lstlisting}
+    
+    \item Verify Python environment:
+    \begin{lstlisting}
+python --version
+python -c "import pandas, xlwings, statsmodels"
+    \end{lstlisting}
+    
+    \item Test Control Panel: Open \texttt{Control\_Panel\_New.xlsm}, enable macros
+\end{enumerate}
+
+\section{Workflow 1: Import and Map Payroll Data}
+
+\subsection{Step-by-Step Process}
+
+\textbf{Step 1: Prepare Source Workbook}
+
+\begin{enumerate}
+    \item Open your payroll Excel file (e.g., \texttt{Pay\_emploier\_sept25.xlsm})
+    \item Ensure sheets are named by month (e.g., "January", "February", etc.)
+    \item Verify structure:
+    \begin{itemize}
+        \item Row 7: Employee IDs in columns C onwards
+        \item Column A: Salary item codes (optional)
+        \item Column B: Salary item labels (required)
+        \item Columns C+: Employee data
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Example Source Sheet:}
+
+\begin{table}[H]
+\centering
+\footnotesize
+\begin{tabular}{|l|l|r|r|r|}
+\hline
+\textbf{Code} & \textbf{Label} & \textbf{EMP-001} & \textbf{EMP-002} & \textbf{EMP-003} \\
+\hline
+S001 & SALAIRE\_BASE & 15000 & 12000 & 18000 \\
+S002 & PRIME\_TRANSPORT & 500 & 500 & 800 \\
+S003 & INDEMNITE & 200 & 150 & 300 \\
+... & ... & ... & ... & ... \\
+\hline
+\end{tabular}
+\caption{Source Sheet Structure (Transposed Format)}
+\end{table}
+
+\textbf{Step 2: Launch Import Dialog}
+
+\begin{enumerate}
+    \item Open \texttt{Control\_Panel\_New.xlsm}
+    \item Click \textbf{Button 1: Import \& Map Data}
+    \item Wait for GUI to appear (may take 10-15 seconds)
+\end{enumerate}
+
+\textbf{Step 3: Select Source Workbook}
+
+\begin{enumerate}
+    \item Click "Browse..." button
+    \item Navigate to your payroll workbook
+    \item Select file and click "Open"
+    \item Path will appear in dialog
+\end{enumerate}
+
+\textbf{Step 4: Define Mappings}
+
+\begin{enumerate}
+    \item GUI shows destination column names (left side)
+    \item For each destination column:
+    \begin{itemize}
+        \item Click "Define Formula" button
+        \item Enter formula in popup (e.g., \texttt{+SALAIRE\_BASE label})
+        \item Click "Save"
+    \end{itemize}
+    
+    \item Formula syntax examples:
+    \begin{itemize}
+        \item Single source: \texttt{+SALAIRE\_BASE label}
+        \item Sum multiple: \texttt{+BASE label +PRIME label}
+        \item Subtraction: \texttt{+BRUT label -COT label}
+        \item Multiplication: \texttt{+HEURES label *TAUX label}
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Step 5: Execute Mapping}
+
+\begin{enumerate}
+    \item After defining all formulas, click \textbf{"Execute Mapping"}
+    \item Progress bar appears (may take 30-60 seconds)
+    \item Success message: "Mapping complete!"
+    \item Close dialog
+\end{enumerate}
+
+\textbf{Step 6: Verify Output}
+
+\begin{enumerate}
+    \item Click \textbf{Button 5: Open Mapped Workbook}
+    \item \texttt{data\_sorted.xlsx} opens automatically
+    \item Verify each month sheet has correct structure
+    \item Check calculations are correct
+\end{enumerate}
+
+\subsection{Troubleshooting}
+
+\begin{table}[H]
+\centering
+\footnotesize
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Error} & \textbf{Solution} \\
+\midrule
+"No CustomMap sheet" & Source workbook needs a CustomMap sheet (will be created automatically on first save) \\
+"Key not found" & Check label spelling in formula matches source sheet exactly \\
+"No employees detected" & Verify Row 7 has employee IDs in columns C onwards \\
+GUI doesn't appear & Check Python path in VBA, run manually: \texttt{python scripts/run\_excel.py} \\
+Slow performance & Close other Excel files, use "Modified Only" option \\
+\bottomrule
+\end{tabularx}
+\caption{Common Import/Map Errors}
+\end{table}
+
+\section{Workflow 2: Visualize Payroll Analytics}
+
+\subsection{Step-by-Step Process}
+
+\textbf{Step 1: Ensure Data Exists}
+
+\begin{enumerate}
+    \item Verify \texttt{outputs/payroll\_long.csv} exists
+    \item If not, run Workflow 1 first or manually convert data
+    \item Check file has required columns: \texttt{month}, \texttt{employee\_id}, \texttt{salaire\_brut}, \texttt{salaire\_net}
+\end{enumerate}
+
+\textbf{Step 2: Launch Dashboard}
+
+\begin{enumerate}
+    \item Open \texttt{Control\_Panel\_New.xlsm}
+    \item Click \textbf{Button 4: Visualize Data}
+    \item Dashboard GUI appears (10-15 seconds)
+\end{enumerate}
+
+\textbf{Step 3: Choose Visualization}
+
+\begin{enumerate}
+    \item Dashboard shows 10 buttons:
+    \begin{enumerate}
+        \item Total Cost Trend
+        \item Cost Forecast (AR)
+        \item Cost Per Employee
+        \item Cost Breakdown
+        \item Cost Distribution
+        \item Top Employees
+        \item Gross vs Net Comparison
+        \item Headcount Trend
+        \item Burn Rate Dashboard
+        \item Year-over-Year Comparison
+    \end{enumerate}
+    
+    \item Click any button to generate that plot
+    \item Plot appears in separate matplotlib window
+    \item Close plot window to return to dashboard
+\end{enumerate}
+
+\textbf{Step 4: Interactive Plots}
+
+For \textbf{Plot 7 (Gross vs Net)}:
+\begin{enumerate}
+    \item Click "7. Gross vs Net Comparison"
+    \item Selection dialog appears with employee list
+    \item Scroll and select an employee
+    \item Click "Plot" button
+    \item Plot shows gross vs net for that employee over time
+\end{enumerate}
+
+\subsection{Interpretation Guide}
+
+\textbf{Plot 1: Total Cost Trend}
+\begin{itemize}
+    \item \textbf{Look for:} Upward trends, spikes, seasonal patterns
+    \item \textbf{Action:} If spike, investigate bonuses or back pay
+\end{itemize}
+
+\textbf{Plot 2: Cost Forecast}
+\begin{itemize}
+    \item \textbf{Look for:} Predicted trend (up/down/stable)
+    \item \textbf{Action:} Use for budget planning next 6 months
+    \item \textbf{Note:} Confidence interval widens over time (uncertainty)
+\end{itemize}
+
+\textbf{Plot 3: Cost Per Employee}
+\begin{itemize}
+    \item \textbf{Look for:} Increasing = hiring expensive staff, Decreasing = cost reduction
+    \item \textbf{Action:} Compare to industry benchmarks
+\end{itemize}
+
+\textbf{Plot 4: Cost Breakdown}
+\begin{itemize}
+    \item \textbf{Look for:} Proportion of net vs taxes
+    \item \textbf{Action:} If taxes increase, review tax optimization
+\end{itemize}
+
+\textbf{Plot 5: Cost Distribution}
+\begin{itemize}
+    \item \textbf{Look for:} Outliers (dots beyond whiskers), skewness
+    \item \textbf{Action:} Outliers = investigate salary equity
+\end{itemize}
+
+\textbf{Plot 6: Top Employees}
+\begin{itemize}
+    \item \textbf{Look for:} Top 10 most expensive employees
+    \item \textbf{Action:} Retention planning for high-cost employees
+\end{itemize}
+
+\textbf{Plot 7: Gross vs Net}
+\begin{itemize}
+    \item \textbf{Look for:} Gap between gross and net (tax burden)
+    \item \textbf{Action:} Individual salary review, tax optimization
+\end{itemize}
+
+\textbf{Plot 8: Headcount Trend}
+\begin{itemize}
+    \item \textbf{Look for:} Hiring/firing patterns, growth rate
+    \item \textbf{Action:} Correlate with revenue to assess efficiency
+\end{itemize}
+
+\textbf{Plot 9: Burn Rate Dashboard}
+\begin{itemize}
+    \item \textbf{Look for:} Monthly variability, cumulative total, runway
+    \item \textbf{Action:} If runway <6 months, urgent cost reduction needed
+\end{itemize}
+
+\textbf{Plot 10: Year-over-Year}
+\begin{itemize}
+    \item \textbf{Look for:} Seasonal patterns, growth rate
+    \item \textbf{Action:} Compare same month across years for trend analysis
+\end{itemize}
+
+\section{Workflow 3: Modify Existing Mappings}
+
+\subsection{Step-by-Step Process}
+
+\textbf{Step 1: Open Source Workbook}
+
+\begin{enumerate}
+    \item Open the payroll workbook (e.g., \texttt{Pay\_emploier\_sept25.xlsm})
+    \item Navigate to \textbf{CustomMap} sheet (created by first mapping)
+\end{enumerate}
+
+\textbf{Step 2: Review Mappings}
+
+\begin{table}[H]
+\centering
+\footnotesize
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Destination\_Label} & \textbf{Mapping\_Type} & \textbf{KeysOps} \\
+\hline
+salaire\_brut & formula & +::SALAIRE\_BASE::label \\
+salaire\_net & formula & +::BRUT::label;;-::COT::label \\
+prime\_total & formula & +::PRIME1::label;;+::PRIME2::label \\
+\hline
+\end{tabular}
+\caption{CustomMap Sheet Structure}
+\end{table}
+
+\textbf{Step 3: Edit Formula}
+
+\begin{enumerate}
+    \item Find row with destination you want to change
+    \item Edit KeysOps column:
+    \begin{itemize}
+        \item Format: \texttt{operator::key::type;;operator::key::type}
+        \item Example: \texttt{+::BASE::label;;+::PRIME::label}
+    \end{itemize}
+    \item Save workbook
+\end{enumerate}
+
+\textbf{Step 4: Re-run Mapping}
+
+\begin{enumerate}
+    \item Open \texttt{Control\_Panel\_New.xlsm}
+    \item Click \textbf{Button 1: Import \& Map Data}
+    \item GUI loads existing mappings from CustomMap sheet
+    \item Click \textbf{"Execute Mapping"} (only modified columns will recalculate)
+\end{enumerate}
+
+\section{Workflow 4: Generate Synthetic Data}
+
+\subsection{Purpose}
+
+When real payroll data is too small or sensitive, generate synthetic data for:
+\begin{itemize}
+    \item Model training
+    \item Algorithm testing
+    \item Public demonstrations
+    \item Academic papers
+\end{itemize}
+
+\subsection{Step-by-Step Process}
+
+\textbf{Step 1: Configure Generator}
+
+Edit \texttt{src/data generation/generate\_synthetic\_payroll.py}:
+
+\begin{lstlisting}[style=pythonstyle]
+# Configuration
+num_employees = 50        # Number of synthetic employees
+num_months = 24          # Number of months to generate
+base_salary_mean = 15000 # Average base salary
+base_salary_std = 3000   # Salary variation
+
+# Growth parameters
+monthly_growth_rate = 0.02  # 2% monthly growth
+turnover_rate = 0.05        # 5% monthly turnover
+\end{lstlisting}
+
+\textbf{Step 2: Run Generator}
+
+\begin{lstlisting}
+python src/data generation/generate_synthetic_payroll.py
+\end{lstlisting}
+
+\textbf{Step 3: Output}
+
+\begin{itemize}
+    \item Saves to \texttt{outputs/synthetic\_payroll\_long.csv}
+    \item Same structure as real data (long format)
+    \item Can be used directly with dashboard and forecasting
+\end{itemize}
+
+\subsection{Synthetic Data Features}
+
+\begin{enumerate}
+    \item \textbf{Realistic distributions:} Normal distribution for salaries
+    \item \textbf{Temporal trends:} Growth over time
+    \item \textbf{Employee churn:} Hiring/terminations
+    \item \textbf{Noise:} Random monthly variations
+    \item \textbf{Correlations:} Gross/net relationship preserved
+\end{enumerate}
+
+\section{Workflow 5: Export for Analysis}
+
+\subsection{Export Long Format CSV}
+
+\textbf{Purpose:} Create CSV file for analysis in Python, R, or other tools.
+
+\textbf{Steps:}
+
+\begin{enumerate}
+    \item Ensure \texttt{data\_sorted.xlsx} exists (run Workflow 1 if needed)
+    \item Run conversion script:
+    \begin{lstlisting}
+python scripts/run_load_data.py
+    \end{lstlisting}
+    
+    \item Output: \texttt{outputs/payroll\_long.csv}
+    
+    \item Verify structure:
+    \begin{lstlisting}[style=pythonstyle]
+import pandas as pd
+df = pd.read_csv('outputs/payroll_long.csv')
+print(df.head())
+print(df.columns)
+    \end{lstlisting}
+\end{enumerate}
+
+\textbf{Expected Columns:}
+\begin{itemize}
+    \item \texttt{month} - Date (YYYY-MM-DD)
+    \item \texttt{employee\_id} - Unique identifier
+    \item \texttt{salaire\_brut} - Gross salary
+    \item \texttt{salaire\_net} - Net salary
+    \item Additional columns as defined in mappings
+\end{itemize}
+
+\subsection{Export Forecast Results}
+
+\begin{enumerate}
+    \item Run forecasting script:
+    \begin{lstlisting}
+python scripts/run_forecast.py
+    \end{lstlisting}
+    
+    \item Output: \texttt{outputs/forecast\_ar2.csv}
+    
+    \item Structure:
+    \begin{table}[H]
+    \centering
+    \begin{tabular}{cc}
+    \toprule
+    \textbf{forecast\_month} & \textbf{predicted\_cost} \\
+    \midrule
+    1 & 145000 \\
+    2 & 148000 \\
+    3 & 150000 \\
+    ... & ... \\
+    \bottomrule
+    \end{tabular}
+    \caption{Forecast CSV Structure}
+    \end{table}
+\end{enumerate}
+
+\section{Best Practices}
+
+\subsection{Data Quality}
+
+\begin{enumerate}
+    \item \textbf{Consistent naming:} Use same labels across months
+    \item \textbf{No missing IDs:} Ensure Row 7 has IDs for all employees
+    \item \textbf{Numeric values:} Avoid text in data cells
+    \item \textbf{Date format:} Use consistent month sheet names
+\end{enumerate}
+
+\subsection{Mapping Formulas}
+
+\begin{enumerate}
+    \item \textbf{Test incrementally:} Define one formula at a time, verify
+    \item \textbf{Use codes when possible:} More reliable than labels
+    \item \textbf{Document mappings:} Add comments in CustomMap sheet
+    \item \textbf{Version control:} Save source workbook after each mapping session
+\end{enumerate}
+
+\subsection{Visualization}
+
+\begin{enumerate}
+    \item \textbf{Regular monitoring:} Run dashboard weekly/monthly
+    \item \textbf{Share insights:} Export plots (right-click plot > Save As)
+    \item \textbf{Compare periods:} Use YoY plot to track progress
+    \item \textbf{Act on anomalies:} Investigate spikes/drops immediately
+\end{enumerate}
+
+\subsection{Performance}
+
+\begin{enumerate}
+    \item \textbf{Close other Excel files:} Reduces xlwings overhead
+    \item \textbf{Use "Modified Only":} When re-running mappings
+    \item \textbf{Batch processing:} Process multiple months at once
+    \item \textbf{Cache results:} Save intermediate CSVs to avoid recomputation
+\end{enumerate}
+
+\section{Command Line Reference}
+
+\subsection{Manual Execution}
+
+If buttons don't work, run scripts manually:
+
+\begin{lstlisting}
+# Import and mapping
+python scripts/run_excel.py
+
+# Dashboard
+python scripts/run_dashboard.py
+
+# Convert to long format
+python scripts/run_load_data.py
+
+# Forecasting
+python scripts/run_forecast.py
+
+# Plotting (individual plots)
+python scripts/run_plot.py
+\end{lstlisting}
+
+\subsection{Python Environment}
+
+Check installed packages:
+
+\begin{lstlisting}
+pip list | grep pandas
+pip list | grep xlwings
+pip list | grep statsmodels
+pip list | grep matplotlib
+\end{lstlisting}
+
+Update packages:
+
+\begin{lstlisting}
+pip install --upgrade pandas xlwings statsmodels matplotlib
+\end{lstlisting}
+
+\section{Frequently Asked Questions}
+
+\textbf{Q: Can I use different month sheet names?}
+
+A: Yes, but update \texttt{src/core/config.py}:
+\begin{lstlisting}[style=pythonstyle]
+MONTH_SHEETS = ["Jan", "Feb", "Mar", ...]
+\end{lstlisting}
+
+\textbf{Q: How do I add a new destination column?}
+
+A: Edit target workbook header row, then define formula in GUI.
+
+\textbf{Q: Can I use division in formulas?}
+
+A: Yes, use \texttt{/} operator. Example: \texttt{+TOTAL label /HEURES label}
+
+\textbf{Q: What if I have multiple years of data?}
+
+A: Name sheets like "2024-01", "2024-02", etc. Update config accordingly.
+
+\textbf{Q: How do I delete a mapping?}
+
+A: Open CustomMap sheet, delete the row, save workbook.
+
+\textbf{Q: Can I run this on Mac/Linux?}
+
+A: Python scripts yes, Excel macros no (VBA is Windows-only). Use LibreOffice Calc with Python scripts directly.
+
+\textbf{Q: How do I backup my mappings?}
+
+A: CustomMap sheet is stored in source workbook. Back up the entire workbook file.
+
+\textbf{Q: What's the maximum number of employees?}
+
+A: No hard limit, but performance degrades above 1000 employees. Consider splitting data.
+
+\textbf{Q: Can I forecast more than 6 months?}
+
+A: Yes, change \texttt{forecast\_steps} parameter, but accuracy decreases with longer horizons.
+
+\textbf{Q: How do I interpret confidence intervals?}
+
+A: Wider interval = more uncertainty. If interval is too wide (>50\% of forecast), don't rely on forecast.

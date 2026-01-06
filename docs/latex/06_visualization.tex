@@ -1,0 +1,666 @@
+\chapter{Visualization Dashboard}
+
+\section{Overview}
+
+The visualization dashboard provides 10 executive-level visualizations for payroll analysis:
+
+\begin{enumerate}
+    \item Total Cost Trend - Monthly spending over time
+    \item Cost Forecast - 6-month prediction using AR(2)
+    \item Cost Per Employee - Efficiency metric
+    \item Cost Breakdown - Salary component distribution
+    \item Cost Distribution - Box plot \& histogram for equity
+    \item Top Employees - 10 most expensive (retention risks)
+    \item Gross vs Net Comparison - Interactive employee selection
+    \item Headcount Trend - Workforce growth tracking
+    \item Burn Rate Dashboard - 4-panel cash management
+    \item Year-over-Year Comparison - Seasonal analysis
+\end{enumerate}
+
+\section{Architecture}
+
+\subsection{Class Structure}
+
+\begin{lstlisting}[style=pythonstyle]
+class PayrollDashboard:
+    """Interactive tkinter GUI for payroll visualizations."""
+    
+    def __init__(self, data_path):
+        self.df = pd.read_csv(data_path)
+        self.root = tk.Tk()
+        self.root.title("Payroll Analytics Dashboard")
+        
+        # Create GUI
+        self._create_title_label()
+        self._create_plot_buttons()
+        self._configure_layout()
+    
+    def _create_plot_buttons(self):
+        """Create 10 buttons for different plots."""
+        buttons = [
+            ("1. Total Cost Trend", self.plot_total_cost_trend),
+            ("2. Cost Forecast (AR)", self.plot_cost_forecast),
+            ("3. Cost Per Employee", self.plot_cost_per_employee),
+            # ... 7 more buttons ...
+        ]
+        
+        for text, command in buttons:
+            btn = tk.Button(
+                self.root, text=text, command=command,
+                width=30, height=2, font=('Arial', 11)
+            )
+            btn.pack(pady=5)
+    
+    def run(self):
+        """Start the GUI event loop."""
+        self.root.mainloop()
+\end{lstlisting}
+
+\subsection{Data Requirements}
+
+\textbf{Input Format:} Long-format CSV with columns:
+\begin{itemize}
+    \item \texttt{month} - Date (YYYY-MM-DD)
+    \item \texttt{employee\_id} - Unique identifier
+    \item \texttt{salaire\_brut} - Gross salary
+    \item \texttt{salaire\_net} - Net salary
+    \item Additional salary components (optional)
+\end{itemize}
+
+\textbf{Preprocessing:}
+\begin{lstlisting}[style=pythonstyle]
+def __init__(self, data_path):
+    # Load data
+    self.df = pd.read_csv(data_path)
+    
+    # Convert month to datetime
+    self.df['month'] = pd.to_datetime(self.df['month'])
+    
+    # Sort by month
+    self.df = self.df.sort_values('month')
+\end{lstlisting}
+
+\section{Plot 1: Total Cost Trend}
+
+\subsection{Purpose}
+Monitor monthly payroll spending to track budget usage and identify unusual spikes.
+
+\subsection{Audience}
+\begin{itemize}
+    \item \textbf{CEO:} Overall spending trends
+    \item \textbf{CFO:} Budget compliance
+    \item \textbf{HR:} Cost impact of hiring/terminations
+\end{itemize}
+
+\subsection{Implementation}
+
+\begin{lstlisting}[style=pythonstyle]
+def plot_total_cost_trend(self):
+    """Line plot of total monthly payroll cost."""
+    
+    # Aggregate: sum salaire_brut per month
+    monthly = self.df.groupby('month')['salaire_brut'].sum()
+    
+    # Create figure
+    fig, ax = plt.subplots(figsize=(12, 6))
+    
+    # Plot line with markers
+    ax.plot(monthly.index, monthly.values, 
+            marker='o', linewidth=2, markersize=8,
+            color='#2E86AB', label='Total Cost')
+    
+    # Formatting
+    ax.set_title('Total Monthly Payroll Cost', 
+                 fontsize=16, weight='bold')
+    ax.set_xlabel('Month', fontsize=12)
+    ax.set_ylabel('Total Cost (MAD)', fontsize=12)
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+    
+    # Format y-axis as currency
+    ax.yaxis.set_major_formatter(
+        plt.FuncFormatter(lambda x, p: f'{x:,.0f} MAD')
+    )
+    
+    # Rotate x-axis labels
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.show()
+\end{lstlisting}
+
+\subsection{Insights}
+
+\begin{itemize}
+    \item \textbf{Upward trend:} Hiring or salary increases
+    \item \textbf{Sudden spike:} Bonuses or back pay
+    \item \textbf{Downward trend:} Layoffs or cost reduction
+    \item \textbf{Seasonal pattern:} Year-end bonuses
+\end{itemize}
+
+\section{Plot 2: Cost Forecast (AR Model)}
+
+\subsection{Purpose}
+Predict next 6 months of payroll spending using autoregressive model for budget planning.
+
+\subsection{Methodology: AR(2) Model}
+
+\textbf{Theory:}
+$$X_t = c + \phi_1 X_{t-1} + \phi_2 X_{t-2} + \epsilon_t$$
+
+Where:
+\begin{itemize}
+    \item $X_t$ = Total cost at time $t$
+    \item $\phi_1, \phi_2$ = Autoregressive coefficients
+    \item $c$ = Constant term
+    \item $\epsilon_t$ = White noise error
+\end{itemize}
+
+\textbf{Why AR(2)?} User validated through testing that AR(2) gives most accurate predictions for this payroll dataset.
+
+\subsection{Implementation}
+
+\begin{lstlisting}[style=pythonstyle]
+def plot_cost_forecast(self):
+    """Forecast next 6 months using AR(2) model."""
+    from statsmodels.tsa.ar_model import AutoReg
+    
+    # Prepare time series
+    monthly = self.df.groupby('month')['salaire_brut'].sum()
+    
+    # Fit AR(2) model
+    model = AutoReg(monthly, lags=2)
+    model_fit = model.fit()
+    
+    # Forecast 6 steps ahead
+    forecast_steps = 6
+    predictions = model_fit.forecast(steps=forecast_steps)
+    
+    # Generate future dates
+    last_date = monthly.index[-1]
+    future_dates = pd.date_range(
+        start=last_date + pd.DateOffset(months=1),
+        periods=forecast_steps,
+        freq='MS'
+    )
+    
+    # Calculate confidence intervals (95%)
+    # Variance grows with horizon: sigma^2 * (1 + phi1^2 + phi2^2)
+    std_error = model_fit.params.iloc[-1]  # Residual std
+    ci_lower = predictions - 1.96 * std_error
+    ci_upper = predictions + 1.96 * std_error
+    
+    # Plot
+    fig, ax = plt.subplots(figsize=(14, 6))
+    
+    # Historical data
+    ax.plot(monthly.index, monthly.values,
+            marker='o', linewidth=2, label='Historical',
+            color='#2E86AB')
+    
+    # Forecast
+    ax.plot(future_dates, predictions,
+            marker='s', linewidth=2, linestyle='--',
+            label='Forecast (AR2)', color='#A23B72')
+    
+    # Confidence interval
+    ax.fill_between(future_dates, ci_lower, ci_upper,
+                     alpha=0.2, color='#A23B72',
+                     label='95% Confidence Interval')
+    
+    # Formatting
+    ax.set_title('6-Month Cost Forecast (AR2 Model)',
+                 fontsize=16, weight='bold')
+    ax.set_xlabel('Month', fontsize=12)
+    ax.set_ylabel('Total Cost (MAD)', fontsize=12)
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+    
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.show()
+\end{lstlisting}
+
+\subsection{Interpretation}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Element} & \textbf{Meaning} \\
+\midrule
+Forecast line & Point estimate for each month \\
+Shaded region & 95\% probability cost falls in range \\
+Widening region & Uncertainty increases with time \\
+\bottomrule
+\end{tabular}
+\caption{Forecast Plot Elements}
+\end{table}
+
+\section{Plot 3: Cost Per Employee}
+
+\subsection{Purpose}
+Track efficiency metric (average cost per employee) to identify staffing efficiency.
+
+\subsection{Implementation}
+
+\begin{lstlisting}[style=pythonstyle]
+def plot_cost_per_employee(self):
+    """Line plot of average cost per employee."""
+    
+    # Calculate monthly: total_cost / num_employees
+    monthly_stats = self.df.groupby('month').agg({
+        'salaire_brut': 'sum',
+        'employee_id': 'nunique'  # Distinct count
+    })
+    
+    monthly_stats['cost_per_emp'] = (
+        monthly_stats['salaire_brut'] / 
+        monthly_stats['employee_id']
+    )
+    
+    # Plot
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(monthly_stats.index, 
+            monthly_stats['cost_per_emp'],
+            marker='o', linewidth=2, color='#F18F01')
+    
+    # Add mean line
+    mean_cost = monthly_stats['cost_per_emp'].mean()
+    ax.axhline(mean_cost, color='red', linestyle='--',
+               label=f'Mean: {mean_cost:,.0f} MAD')
+    
+    ax.set_title('Average Cost Per Employee',
+                 fontsize=16, weight='bold')
+    ax.set_xlabel('Month', fontsize=12)
+    ax.set_ylabel('Cost Per Employee (MAD)', fontsize=12)
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+    
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.show()
+\end{lstlisting}
+
+\subsection{Insights}
+
+\begin{itemize}
+    \item \textbf{Increasing:} Hiring more senior/expensive staff
+    \item \textbf{Decreasing:} Hiring junior staff or salary cuts
+    \item \textbf{Stable:} Consistent workforce composition
+\end{itemize}
+
+\section{Plot 4: Cost Breakdown (Stacked Area)}
+
+\subsection{Purpose}
+Visualize composition of payroll (gross, net, taxes) over time.
+
+\subsection{Implementation}
+
+\begin{lstlisting}[style=pythonstyle]
+def plot_cost_breakdown(self):
+    """Stacked area chart of salary components."""
+    
+    # Aggregate multiple columns
+    monthly = self.df.groupby('month').agg({
+        'salaire_brut': 'sum',
+        'salaire_net': 'sum',
+        # Add other components if available
+    }).fillna(0)
+    
+    # Calculate derived: taxes = brut - net
+    monthly['taxes_total'] = (
+        monthly['salaire_brut'] - monthly['salaire_net']
+    )
+    
+    # Plot stacked area
+    fig, ax = plt.subplots(figsize=(14, 7))
+    ax.stackplot(monthly.index,
+                 monthly['salaire_net'],
+                 monthly['taxes_total'],
+                 labels=['Net Salary', 'Taxes & Contributions'],
+                 colors=['#06A77D', '#D62246'],
+                 alpha=0.8)
+    
+    ax.set_title('Payroll Cost Breakdown',
+                 fontsize=16, weight='bold')
+    ax.set_xlabel('Month', fontsize=12)
+    ax.set_ylabel('Amount (MAD)', fontsize=12)
+    ax.legend(loc='upper left')
+    ax.grid(True, alpha=0.3)
+    
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.show()
+\end{lstlisting}
+
+\section{Plot 5: Cost Distribution}
+
+\subsection{Purpose}
+Analyze salary equity using box plot (outliers) and histogram (distribution shape).
+
+\subsection{Implementation}
+
+\begin{lstlisting}[style=pythonstyle]
+def plot_cost_distribution(self):
+    """Box plot + histogram for salary distribution."""
+    
+    # Get latest month data
+    latest_month = self.df['month'].max()
+    latest_data = self.df[self.df['month'] == latest_month]
+    
+    # Create subplots
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+    
+    # Box plot
+    ax1.boxplot(latest_data['salaire_brut'], vert=True)
+    ax1.set_title('Salary Distribution (Box Plot)',
+                  fontsize=14, weight='bold')
+    ax1.set_ylabel('Gross Salary (MAD)', fontsize=12)
+    ax1.grid(True, alpha=0.3, axis='y')
+    
+    # Histogram
+    ax2.hist(latest_data['salaire_brut'], bins=15,
+             color='#577590', alpha=0.7, edgecolor='black')
+    ax2.set_title('Salary Distribution (Histogram)',
+                  fontsize=14, weight='bold')
+    ax2.set_xlabel('Gross Salary (MAD)', fontsize=12)
+    ax2.set_ylabel('Number of Employees', fontsize=12)
+    ax2.grid(True, alpha=0.3, axis='y')
+    
+    plt.tight_layout()
+    plt.show()
+\end{lstlisting}
+
+\subsection{Insights}
+
+\begin{description}
+    \item[Box Plot] Shows quartiles and outliers
+    \begin{itemize}
+        \item Points beyond whiskers = outliers
+        \item Wide box = high salary variance
+    \end{itemize}
+    
+    \item[Histogram] Shows distribution shape
+    \begin{itemize}
+        \item Right-skewed = few high earners
+        \item Normal = balanced distribution
+    \end{itemize}
+\end{description}
+
+\section{Plot 6: Top 10 Employees}
+
+\subsection{Purpose}
+Identify retention risks (most expensive employees) for succession planning.
+
+\subsection{Implementation}
+
+\begin{lstlisting}[style=pythonstyle]
+def plot_top_employees(self):
+    """Horizontal bar chart of top 10 most expensive employees."""
+    
+    # Average salary per employee across all months
+    emp_avg = self.df.groupby('employee_id')['salaire_brut'].mean()
+    
+    # Get top 10
+    top10 = emp_avg.nlargest(10).sort_values()
+    
+    # Plot horizontal bar
+    fig, ax = plt.subplots(figsize=(10, 8))
+    bars = ax.barh(range(len(top10)), top10.values,
+                   color='#C73E1D', alpha=0.8)
+    
+    # Customize
+    ax.set_yticks(range(len(top10)))
+    ax.set_yticklabels(top10.index)
+    ax.set_xlabel('Average Gross Salary (MAD)', fontsize=12)
+    ax.set_title('Top 10 Most Expensive Employees',
+                 fontsize=16, weight='bold')
+    ax.grid(True, alpha=0.3, axis='x')
+    
+    # Add value labels
+    for i, bar in enumerate(bars):
+        width = bar.get_width()
+        ax.text(width, i, f' {width:,.0f}',
+                va='center', fontsize=10)
+    
+    plt.tight_layout()
+    plt.show()
+\end{lstlisting}
+
+\section{Plot 7: Gross vs Net (Interactive)}
+
+\subsection{Purpose}
+Compare gross and net salary for individual employee to analyze tax burden.
+
+\subsection{Interactive Selection}
+
+\begin{lstlisting}[style=pythonstyle]
+def plot_gross_vs_net(self):
+    """Interactive plot: user selects employee."""
+    
+    # Get unique employees
+    employees = sorted(self.df['employee_id'].unique())
+    
+    # Create selection dialog
+    selection_window = tk.Toplevel(self.root)
+    selection_window.title("Select Employee")
+    selection_window.geometry("300x400")
+    
+    tk.Label(selection_window, 
+             text="Select an employee:",
+             font=('Arial', 12, 'bold')).pack(pady=10)
+    
+    # Listbox with scrollbar
+    frame = tk.Frame(selection_window)
+    frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+    
+    scrollbar = tk.Scrollbar(frame)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+    
+    listbox = tk.Listbox(frame, yscrollcommand=scrollbar.set,
+                        font=('Arial', 10))
+    listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    scrollbar.config(command=listbox.yview)
+    
+    # Populate listbox
+    for emp in employees:
+        listbox.insert(tk.END, emp)
+    
+    # Plot button
+    def on_plot():
+        selection = listbox.curselection()
+        if not selection:
+            messagebox.showwarning("No Selection", 
+                                  "Please select an employee")
+            return
+        
+        emp_id = employees[selection[0]]
+        self._plot_gross_vs_net_for_employee(emp_id)
+        selection_window.destroy()
+    
+    tk.Button(selection_window, text="Plot",
+             command=on_plot, width=15, height=2).pack(pady=10)
+\end{lstlisting}
+
+\subsection{Plotting Function}
+
+\begin{lstlisting}[style=pythonstyle]
+def _plot_gross_vs_net_for_employee(self, emp_id):
+    """Plot gross vs net for specific employee."""
+    
+    # Filter data
+    emp_data = self.df[self.df['employee_id'] == emp_id].sort_values('month')
+    
+    if emp_data.empty:
+        messagebox.showerror("Error", f"No data for {emp_id}")
+        return
+    
+    # Plot
+    fig, ax = plt.subplots(figsize=(12, 6))
+    
+    x = emp_data['month']
+    ax.plot(x, emp_data['salaire_brut'], 
+            marker='o', label='Gross', color='#2E86AB', linewidth=2)
+    ax.plot(x, emp_data['salaire_net'],
+            marker='s', label='Net', color='#06A77D', linewidth=2)
+    
+    # Fill area between (tax burden)
+    ax.fill_between(x, emp_data['salaire_brut'],
+                     emp_data['salaire_net'],
+                     alpha=0.3, color='#D62246',
+                     label='Taxes & Contributions')
+    
+    ax.set_title(f'Gross vs Net Salary: {emp_id}',
+                 fontsize=16, weight='bold')
+    ax.set_xlabel('Month', fontsize=12)
+    ax.set_ylabel('Salary (MAD)', fontsize=12)
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.show()
+\end{lstlisting}
+
+\section{Plot 8: Headcount Trend}
+
+\subsection{Implementation}
+
+\begin{lstlisting}[style=pythonstyle]
+def plot_headcount_trend(self):
+    """Line plot of employee count over time."""
+    
+    # Count unique employees per month
+    headcount = self.df.groupby('month')['employee_id'].nunique()
+    
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(headcount.index, headcount.values,
+            marker='o', linewidth=2, color='#06A77D')
+    
+    ax.set_title('Employee Headcount Trend',
+                 fontsize=16, weight='bold')
+    ax.set_xlabel('Month', fontsize=12)
+    ax.set_ylabel('Number of Employees', fontsize=12)
+    ax.grid(True, alpha=0.3)
+    
+    # Add annotations for significant changes
+    changes = headcount.diff()
+    for date, change in changes.items():
+        if abs(change) >= 5:  # Significant change threshold
+            label = f'+{int(change)}' if change > 0 else f'{int(change)}'
+            ax.annotate(label, xy=(date, headcount[date]),
+                       xytext=(0, 10), textcoords='offset points',
+                       ha='center', fontsize=9, color='red',
+                       bbox=dict(boxstyle='round,pad=0.3',
+                                facecolor='yellow', alpha=0.7))
+    
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.show()
+\end{lstlisting}
+
+\section{Plot 9: Burn Rate Dashboard}
+
+\subsection{Purpose}
+4-panel dashboard for cash management (monthly cost, cumulative, moving average, runway).
+
+\subsection{Implementation}
+
+\begin{lstlisting}[style=pythonstyle]
+def plot_burn_rate(self):
+    """4-panel dashboard for cash management."""
+    
+    monthly = self.df.groupby('month')['salaire_brut'].sum()
+    
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 10))
+    
+    # Panel 1: Monthly cost
+    ax1.bar(monthly.index, monthly.values, color='#577590', alpha=0.7)
+    ax1.set_title('Monthly Payroll Cost', fontsize=14, weight='bold')
+    ax1.set_ylabel('Cost (MAD)', fontsize=11)
+    ax1.grid(True, alpha=0.3, axis='y')
+    plt.setp(ax1.xaxis.get_majorticklabels(), rotation=45, ha='right')
+    
+    # Panel 2: Cumulative cost
+    cumulative = monthly.cumsum()
+    ax2.plot(cumulative.index, cumulative.values,
+             marker='o', linewidth=2, color='#D62246')
+    ax2.set_title('Cumulative Cost', fontsize=14, weight='bold')
+    ax2.set_ylabel('Total Cost (MAD)', fontsize=11)
+    ax2.grid(True, alpha=0.3)
+    plt.setp(ax2.xaxis.get_majorticklabels(), rotation=45, ha='right')
+    
+    # Panel 3: 3-month moving average
+    ma3 = monthly.rolling(window=3).mean()
+    ax3.plot(monthly.index, monthly.values,
+             alpha=0.3, label='Monthly', color='gray')
+    ax3.plot(ma3.index, ma3.values,
+             linewidth=2, label='3-Month MA', color='#F18F01')
+    ax3.set_title('3-Month Moving Average', fontsize=14, weight='bold')
+    ax3.set_ylabel('Cost (MAD)', fontsize=11)
+    ax3.legend()
+    ax3.grid(True, alpha=0.3)
+    plt.setp(ax3.xaxis.get_majorticklabels(), rotation=45, ha='right')
+    
+    # Panel 4: Runway (assuming fixed budget)
+    budget = 500000  # Example budget
+    months_left = budget / monthly.mean()
+    ax4.text(0.5, 0.5, f'Runway:\n{months_left:.1f} months',
+             ha='center', va='center', fontsize=24, weight='bold')
+    ax4.text(0.5, 0.3, f'(Based on avg: {monthly.mean():,.0f} MAD/month)',
+             ha='center', va='center', fontsize=12)
+    ax4.axis('off')
+    
+    plt.suptitle('Burn Rate Dashboard', fontsize=18, weight='bold', y=0.98)
+    plt.tight_layout()
+    plt.show()
+\end{lstlisting}
+
+\section{Plot 10: Year-over-Year Comparison}
+
+\subsection{Purpose}
+Compare same month across different years to identify seasonal patterns.
+
+\subsection{Implementation}
+
+\begin{lstlisting}[style=pythonstyle]
+def plot_yoy_comparison(self):
+    """Year-over-year comparison by month."""
+    
+    # Extract year and month
+    self.df['year'] = self.df['month'].dt.year
+    self.df['month_num'] = self.df['month'].dt.month
+    
+    # Aggregate: sum per year-month
+    pivot = self.df.groupby(['year', 'month_num'])['salaire_brut'].sum().unstack(level=0)
+    
+    # Plot
+    fig, ax = plt.subplots(figsize=(14, 7))
+    
+    colors = ['#2E86AB', '#A23B72', '#F18F01', '#06A77D']
+    for i, year in enumerate(pivot.columns):
+        ax.plot(pivot.index, pivot[year],
+                marker='o', label=f'Year {year}',
+                linewidth=2, color=colors[i % len(colors)])
+    
+    ax.set_title('Year-over-Year Payroll Comparison',
+                 fontsize=16, weight='bold')
+    ax.set_xlabel('Month', fontsize=12)
+    ax.set_ylabel('Total Cost (MAD)', fontsize=12)
+    ax.set_xticks(range(1, 13))
+    ax.set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.show()
+\end{lstlisting}
+
+\subsection{Insights}
+
+\begin{itemize}
+    \item \textbf{Seasonal spikes:} Bonuses in December
+    \item \textbf{Year-over-year growth:} Hiring expansion
+    \item \textbf{Consistent pattern:} Predictable costs
+\end{itemize}

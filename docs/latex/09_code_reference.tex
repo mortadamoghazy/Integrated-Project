@@ -1,0 +1,981 @@
+\chapter{Code Reference}
+
+\section{Project Structure}
+
+\begin{forest}
+  for tree={
+    font=\ttfamily,
+    grow'=0,
+    child anchor=west,
+    parent anchor=south,
+    anchor=west,
+    calign=first,
+    edge path={
+      \noexpand\path [draw, \forestoption{edge}]
+      (!u.south west) +(7.5pt,0) |- node[fill,inner sep=1.25pt] {} (.child anchor)\forestoption{edge label};
+    },
+    before typesetting nodes={
+      if n=1
+        {insert before={[,phantom]}}
+        {}
+    },
+    fit=band,
+    before computing xy={l=15pt},
+  }
+[Project Root
+  [data/
+    [raw/
+      [Pay\_emploier\_sept25.xlsm]
+      [Control\_Panel.xlsm]
+    ]
+  ]
+  [docs/
+    [latex/ (LaTeX documentation)]
+    [DASHBOARD\_GUIDE.md]
+  ]
+  [outputs/
+    [payroll\_long.csv]
+    [forecast\_ar2.csv]
+    [results\_*.csv (model results)]
+  ]
+  [scripts/
+    [run\_excel.py]
+    [run\_dashboard.py]
+    [run\_forecast.py]
+    [run\_load\_data.py]
+    [run\_plot.py]
+  ]
+  [src/
+    [\_\_init\_\_.py]
+    [core/
+      [config.py]
+      [data\_loader.py]
+      [multi\_sheet\_loader.py]
+      [normalization.py]
+    ]
+    [data generation/
+      [generate\_synthetic\_payroll.py]
+    ]
+    [excel\_tools/
+      [import\_dialog.py]
+      [mapping\_gui.py]
+    ]
+    [features/
+      [analytics/
+        [dashboard\_gui.py]
+        [plot\_salary\_field.py]
+        [regression\_*.py (models)]
+        [visualize\_all\_models.py]
+      ]
+      [gui/
+        [excel\_gui\_launcher.py]
+      ]
+      [payroll\_processing/
+        [automation.py]
+        [mapping\_engine.py]
+      ]
+    ]
+  ]
+  [tests/
+    [test\_monthly\_mapping\_engine.py]
+    [test\_monthly\_mapping\_gui\_launcher.py]
+  ]
+  [Control\_Panel\_New.xlsm (Excel interface)]
+  [requirements.txt]
+]
+\end{forest}
+
+\section{Core Modules}
+
+\subsection{src/core/config.py}
+
+\textbf{Purpose:} Centralized configuration for paths, constants, and settings.
+
+\textbf{Key Constants:}
+
+\begin{lstlisting}[style=pythonstyle]
+CONFIG = {
+    "paths": {
+        "project_root": Path(__file__).parent.parent.parent,
+        "data_dir": "data/raw",
+        "output_dir": "outputs",
+    },
+    
+    "excel": {
+        "id_row": 7,              # Row with employee IDs
+        "code_col": 0,            # Column A (0-indexed)
+        "label_col": 2,           # Column B
+        "first_data_col": 2,      # Column C (where employees start)
+    },
+    
+    "output": {
+        "payroll_long": "outputs/payroll_long.csv",
+        "forecast": "outputs/forecast_ar2.csv",
+    },
+    
+    "month_sheets": [
+        "January", "February", "March", "April", 
+        "May", "June", "July", "August", 
+        "September", "October", "November", "December"
+    ],
+    
+    "custom_sheet": "CustomMap",
+    
+    "target_columns": [
+        "employee_id",
+        "salaire_brut",
+        "salaire_net",
+        "cotisation_salariale",
+        "cotisation_patronale",
+        # ... more columns ...
+    ]
+}
+\end{lstlisting}
+
+\textbf{Usage:}
+\begin{lstlisting}[style=pythonstyle]
+from src.core.config import CONFIG
+
+data_path = CONFIG["paths"]["data_dir"]
+id_row = CONFIG["excel"]["id_row"]
+\end{lstlisting}
+
+\subsection{src/core/normalization.py}
+
+\textbf{Purpose:} Normalize labels for fuzzy matching (remove accents, lowercase, strip whitespace).
+
+\textbf{Key Functions:}
+
+\begin{lstlisting}[style=pythonstyle]
+def _norm_label(text: str) -> str:
+    """
+    Normalize label for matching.
+    
+    - Lowercase
+    - Remove accents
+    - Strip whitespace
+    - Collapse multiple spaces
+    
+    Example:
+        "Salaire  BASE" -> "salaire base"
+        "Cotisation Salariale" -> "cotisation salariale"
+    """
+    import unicodedata
+    
+    if not text:
+        return ""
+    
+    # Convert to string
+    text = str(text)
+    
+    # Lowercase
+    text = text.lower()
+    
+    # Remove accents
+    text = ''.join(
+        c for c in unicodedata.normalize('NFD', text)
+        if unicodedata.category(c) != 'Mn'
+    )
+    
+    # Strip and collapse spaces
+    text = ' '.join(text.split())
+    
+    return text
+\end{lstlisting}
+
+\textbf{Usage:}
+\begin{lstlisting}[style=pythonstyle]
+from src.core.normalization import _norm_label
+
+norm1 = _norm_label("SALAIRE BASE")   # "salaire base"
+norm2 = _norm_label("Salaire  Base")  # "salaire base"
+assert norm1 == norm2  # True - fuzzy match
+\end{lstlisting}
+
+\subsection{src/core/data\_loader.py}
+
+\textbf{Purpose:} Load payroll data from various formats (Excel, CSV).
+
+\textbf{Key Functions:}
+
+\begin{lstlisting}[style=pythonstyle]
+def load_payroll_long(csv_path: str) -> pd.DataFrame:
+    """
+    Load long-format payroll CSV.
+    
+    Returns DataFrame with columns:
+        - month (datetime)
+        - employee_id (str)
+        - salaire_brut (float)
+        - salaire_net (float)
+        - ...
+    """
+    df = pd.read_csv(csv_path)
+    df['month'] = pd.to_datetime(df['month'])
+    return df
+
+
+def load_mapped_workbook(wb_path: str) -> Dict[str, pd.DataFrame]:
+    """
+    Load all month sheets from mapped workbook.
+    
+    Returns:
+        Dictionary mapping month name to DataFrame
+    """
+    import xlwings as xw
+    
+    wb = xw.Book(wb_path)
+    data = {}
+    
+    for sheet in wb.sheets:
+        if sheet.name in CONFIG["month_sheets"]:
+            # Read sheet to DataFrame
+            used_range = sheet.range("A1").current_region
+            df = pd.DataFrame(used_range.value[1:], 
+                            columns=used_range.value[0])
+            data[sheet.name] = df
+    
+    wb.close()
+    return data
+\end{lstlisting}
+
+\subsection{src/core/multi\_sheet\_loader.py}
+
+\textbf{Purpose:} Load and combine multiple month sheets into single long-format DataFrame.
+
+\textbf{Key Functions:}
+
+\begin{lstlisting}[style=pythonstyle]
+def load_all_months_to_long(wb_path: str) -> pd.DataFrame:
+    """
+    Load all month sheets and combine to long format.
+    
+    Process:
+        1. Load each month sheet
+        2. Add 'month' column
+        3. Concatenate all months
+        4. Sort by month and employee_id
+    
+    Returns:
+        Long-format DataFrame
+    """
+    import xlwings as xw
+    from datetime import datetime
+    
+    wb = xw.Book(wb_path)
+    all_data = []
+    
+    for i, month_name in enumerate(CONFIG["month_sheets"]):
+        try:
+            sheet = wb.sheets[month_name]
+        except:
+            continue
+        
+        # Read sheet
+        used_range = sheet.range("A1").current_region
+        if used_range.rows.count <= 1:
+            continue
+        
+        df = pd.DataFrame(used_range.value[1:],
+                         columns=used_range.value[0])
+        
+        # Add month column (assuming year 2024)
+        df['month'] = datetime(2024, i+1, 1)
+        
+        all_data.append(df)
+    
+    wb.close()
+    
+    # Combine
+    combined = pd.concat(all_data, ignore_index=True)
+    combined = combined.sort_values(['month', 'employee_id'])
+    
+    return combined
+\end{lstlisting}
+
+\section{Excel Integration Modules}
+
+\subsection{src/excel\_tools/import\_dialog.py}
+
+\textbf{Purpose:} File browser dialog for selecting source workbook.
+
+\textbf{Key Functions:}
+
+\begin{lstlisting}[style=pythonstyle]
+def select_workbook_dialog() -> str:
+    """
+    Open file dialog to select Excel workbook.
+    
+    Returns:
+        Absolute path to selected workbook, or None
+    """
+    from tkinter import Tk
+    from tkinter.filedialog import askopenfilename
+    
+    root = Tk()
+    root.withdraw()  # Hide main window
+    
+    filepath = askopenfilename(
+        title="Select Payroll Workbook",
+        filetypes=[
+            ("Excel Files", "*.xlsx *.xlsm *.xls"),
+            ("All Files", "*.*")
+        ]
+    )
+    
+    root.destroy()
+    return filepath if filepath else None
+\end{lstlisting}
+
+\subsection{src/excel\_tools/mapping\_gui.py}
+
+\textbf{Purpose:} Main GUI for defining and executing mappings.
+
+\textbf{Key Classes:}
+
+\begin{lstlisting}[style=pythonstyle]
+class MappingGUI:
+    """Main mapping interface."""
+    
+    def __init__(self, source_wb_path: str):
+        self.source_wb_path = source_wb_path
+        self.mappings = {}  # {dest_label: formula_string}
+        
+        # Create GUI
+        self.root = tk.Tk()
+        self.root.title("Payroll Mapping Tool")
+        self.root.geometry("900x700")
+        
+        self._create_widgets()
+        self._load_existing_mappings()
+    
+    def _create_widgets(self):
+        """Create GUI widgets."""
+        # Title
+        tk.Label(self.root, text="Define Payroll Mappings",
+                font=('Arial', 16, 'bold')).pack(pady=10)
+        
+        # Scrollable frame for destination columns
+        self._create_scrollable_frame()
+        
+        # Execute button
+        tk.Button(self.root, text="Execute Mapping",
+                 command=self._execute_mapping,
+                 bg='green', fg='white',
+                 font=('Arial', 12, 'bold'),
+                 width=20, height=2).pack(pady=20)
+    
+    def _create_scrollable_frame(self):
+        """Create scrollable frame with destination columns."""
+        frame = tk.Frame(self.root)
+        frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+        
+        canvas = tk.Canvas(frame)
+        scrollbar = tk.Scrollbar(frame, orient="vertical",
+                                command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame,
+                           anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Create row for each destination column
+        for i, dest_col in enumerate(CONFIG["target_columns"]):
+            self._create_destination_row(scrollable_frame, i, dest_col)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+    
+    def _create_destination_row(self, parent, row, dest_label):
+        """Create row for one destination column."""
+        # Label
+        tk.Label(parent, text=dest_label,
+                font=('Arial', 11), width=25,
+                anchor='w').grid(row=row, column=0, padx=5, pady=5)
+        
+        # Formula entry (read-only)
+        entry = tk.Entry(parent, width=40, state='readonly',
+                        font=('Arial', 10))
+        entry.grid(row=row, column=1, padx=5, pady=5)
+        self.formula_entries[dest_label] = entry
+        
+        # Define button
+        btn = tk.Button(parent, text="Define Formula",
+                       command=lambda: self._define_formula(dest_label),
+                       width=15)
+        btn.grid(row=row, column=2, padx=5, pady=5)
+    
+    def _define_formula(self, dest_label):
+        """Open dialog to define formula for destination column."""
+        formula = simpledialog.askstring(
+            "Define Formula",
+            f"Enter formula for '{dest_label}':\n\n"
+            f"Examples:\n"
+            f"  +SALAIRE_BASE label\n"
+            f"  +BASE label +PRIME label\n"
+            f"  +BRUT label -COT label\n\n"
+            f"Current: {self.mappings.get(dest_label, '(not defined)')}"
+        )
+        
+        if formula:
+            self.mappings[dest_label] = formula
+            self._update_formula_display(dest_label)
+    
+    def _execute_mapping(self):
+        """Execute all mappings."""
+        if not self.mappings:
+            messagebox.showwarning("No Mappings",
+                                  "Define at least one mapping first")
+            return
+        
+        # Show progress
+        progress = tk.Toplevel(self.root)
+        progress.title("Mapping in Progress")
+        tk.Label(progress, text="Processing...",
+                font=('Arial', 12)).pack(padx=50, pady=20)
+        progress_bar = ttk.Progressbar(progress, mode='indeterminate')
+        progress_bar.pack(padx=20, pady=10)
+        progress_bar.start()
+        
+        # Execute in background thread
+        def run_mapping():
+            try:
+                from src.features.payroll_processing.mapping_engine import (
+                    execute_all_mappings
+                )
+                execute_all_mappings(self.source_wb_path, self.mappings)
+                
+                # Close progress
+                progress_bar.stop()
+                progress.destroy()
+                
+                # Success message
+                messagebox.showinfo("Success",
+                                   "Mapping completed successfully!")
+            except Exception as e:
+                progress_bar.stop()
+                progress.destroy()
+                messagebox.showerror("Error",
+                                    f"Mapping failed:\n{str(e)}")
+        
+        import threading
+        threading.Thread(target=run_mapping, daemon=True).start()
+    
+    def run(self):
+        """Start GUI main loop."""
+        self.root.mainloop()
+\end{lstlisting}
+
+\section{Mapping Engine Modules}
+
+\subsection{src/features/payroll\_processing/mapping\_engine.py}
+
+\textbf{Purpose:} Core mapping engine that applies formulas to transform data.
+
+\textbf{Key Functions:}
+
+\begin{lstlisting}[style=pythonstyle]
+@dataclass
+class MappingRule:
+    """Represents a mapping rule."""
+    dest_label_raw: str
+    dest_label_norm: str
+    mapping_type: str
+    keys_ops: List[Tuple[str, str, str]]  # [(op, key, type), ...]
+    
+    def apply(self, sheet, employee_col, row_lookup):
+        """Apply formula to calculate value."""
+        result = 0
+        
+        for operator, key, key_type in self.keys_ops:
+            # Find source row
+            if key_type == "code":
+                row = row_lookup.get_by_code(key)
+            else:
+                row = row_lookup.get_by_label(key)
+            
+            if row is None:
+                continue
+            
+            # Get value
+            value = sheet.range(row, employee_col).value or 0
+            
+            # Apply operator
+            if operator == '+':
+                result += value
+            elif operator == '-':
+                result -= value
+            elif operator == '*':
+                result *= value
+            elif operator == '/':
+                result = result / value if value != 0 else 0
+        
+        return result
+
+
+class RowLookup:
+    """Fast lookup for source rows."""
+    
+    def __init__(self, sheet, code_col=0, label_col=2):
+        self.code_to_row = {}
+        self.label_to_row = {}
+        
+        # Build dictionaries
+        codes = sheet.range("A:A").value
+        labels = sheet.range("B:B").value
+        
+        for i, (code, label) in enumerate(zip(codes, labels), start=1):
+            if i < 8:  # Skip header rows
+                continue
+            
+            if code:
+                self.code_to_row[str(code).strip()] = i
+            
+            if label:
+                norm = _norm_label(str(label))
+                self.label_to_row[norm] = i
+    
+    def get_by_code(self, code):
+        return self.code_to_row.get(str(code).strip())
+    
+    def get_by_label(self, label):
+        return self.label_to_row.get(_norm_label(label))
+
+
+def execute_all_mappings(source_wb_path, mappings):
+    """Execute all mappings."""
+    import xlwings as xw
+    
+    # Open workbooks
+    source_wb = xw.Book(source_wb_path)
+    target_wb = xw.Book()  # New workbook
+    
+    # Convert mappings to rules
+    rules = []
+    for dest_label, formula in mappings.items():
+        keys_ops = parse_formula(formula)
+        rule = MappingRule(
+            dest_label_raw=dest_label,
+            dest_label_norm=_norm_label(dest_label),
+            mapping_type="formula",
+            keys_ops=keys_ops
+        )
+        rules.append(rule)
+    
+    # Save rules to CustomMap sheet
+    save_mappings(source_wb, rules)
+    
+    # Process each month sheet
+    for month_name in CONFIG["month_sheets"]:
+        try:
+            src_sheet = source_wb.sheets[month_name]
+        except:
+            continue
+        
+        # Create destination sheet
+        dest_sheet = target_wb.sheets.add(month_name)
+        
+        # Apply mappings
+        apply_mappings_one_month(src_sheet, dest_sheet, rules)
+    
+    # Save target workbook
+    target_path = CONFIG["paths"]["project_root"] / "data" / "data_sorted.xlsx"
+    target_wb.save(target_path)
+    target_wb.close()
+    source_wb.close()
+\end{lstlisting}
+
+\section{Analytics Modules}
+
+\subsection{src/features/analytics/dashboard\_gui.py}
+
+\textbf{Purpose:} Interactive dashboard with 10 visualizations.
+
+\textbf{Size:} 630+ lines
+
+\textbf{Key Methods:} See Chapter 6 (Visualization Dashboard) for detailed documentation of all 10 plots.
+
+\begin{lstlisting}[style=pythonstyle]
+class PayrollDashboard:
+    """Main dashboard class."""
+    
+    def __init__(self, data_path):
+        self.df = pd.read_csv(data_path)
+        self.df['month'] = pd.to_datetime(self.df['month'])
+        self.root = tk.Tk()
+        self._create_widgets()
+    
+    # 10 plotting methods
+    def plot_total_cost_trend(self): ...
+    def plot_cost_forecast(self): ...
+    def plot_cost_per_employee(self): ...
+    def plot_cost_breakdown(self): ...
+    def plot_cost_distribution(self): ...
+    def plot_top_employees(self): ...
+    def plot_gross_vs_net(self): ...
+    def plot_headcount_trend(self): ...
+    def plot_burn_rate(self): ...
+    def plot_yoy_comparison(self): ...
+    
+    def run(self):
+        self.root.mainloop()
+\end{lstlisting}
+
+\subsection{src/features/analytics/regression\_ar1.py to ar4.py}
+
+\textbf{Purpose:} Standalone AR model implementations for testing.
+
+\textbf{Key Functions:}
+
+\begin{lstlisting}[style=pythonstyle]
+def run_ar2_model(data_path, forecast_steps=6):
+    """Run AR(2) model and save results."""
+    df = pd.read_csv(data_path)
+    df['month'] = pd.to_datetime(df['month'])
+    
+    monthly = df.groupby('month')['salaire_brut'].sum()
+    
+    # Fit AR(2)
+    from statsmodels.tsa.ar_model import AutoReg
+    model = AutoReg(monthly, lags=2)
+    model_fit = model.fit()
+    
+    # Forecast
+    predictions = model_fit.forecast(steps=forecast_steps)
+    
+    # Save results
+    results = pd.DataFrame({
+        'month': range(1, forecast_steps+1),
+        'prediction': predictions.values
+    })
+    results.to_csv('outputs/results_ar2_predictions.csv', index=False)
+    
+    # Employee-level metrics
+    emp_metrics = calculate_employee_metrics(df, predictions)
+    emp_metrics.to_csv('outputs/results_ar2_emp_metrics.csv', index=False)
+\end{lstlisting}
+
+\section{Script Files}
+
+\subsection{scripts/run\_excel.py}
+
+\textbf{Purpose:} Launch mapping GUI.
+
+\begin{lstlisting}[style=pythonstyle]
+"""Launch Excel mapping GUI."""
+
+import sys
+from pathlib import Path
+
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from src.excel_tools.import_dialog import select_workbook_dialog
+from src.excel_tools.mapping_gui import MappingGUI
+
+def main():
+    # Select source workbook
+    wb_path = select_workbook_dialog()
+    
+    if not wb_path:
+        print("No file selected. Exiting.")
+        return
+    
+    # Launch GUI
+    gui = MappingGUI(wb_path)
+    gui.run()
+
+if __name__ == '__main__':
+    main()
+\end{lstlisting}
+
+\subsection{scripts/run\_dashboard.py}
+
+\textbf{Purpose:} Launch analytics dashboard.
+
+\begin{lstlisting}[style=pythonstyle]
+"""Launch analytics dashboard."""
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from src.features.analytics.dashboard_gui import PayrollDashboard
+from src.core.config import CONFIG
+
+def main():
+    data_path = CONFIG["output"]["payroll_long"]
+    
+    if not Path(data_path).exists():
+        print(f"ERROR: Data file not found: {data_path}")
+        print("Run data conversion first.")
+        return
+    
+    dashboard = PayrollDashboard(data_path)
+    dashboard.run()
+
+if __name__ == '__main__':
+    main()
+\end{lstlisting}
+
+\subsection{scripts/run\_forecast.py}
+
+\textbf{Purpose:} Run AR(2) forecasting standalone.
+
+\begin{lstlisting}[style=pythonstyle]
+"""Run AR(2) forecasting."""
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from src.core.config import CONFIG
+from src.features.analytics.regression_ar2 import run_ar2_model
+
+def main():
+    data_path = CONFIG["output"]["payroll_long"]
+    
+    print("Running AR(2) forecasting...")
+    run_ar2_model(data_path, forecast_steps=6)
+    print("Forecast complete. Results saved to outputs/")
+
+if __name__ == '__main__':
+    main()
+\end{lstlisting}
+
+\subsection{scripts/run\_load\_data.py}
+
+\textbf{Purpose:} Convert Excel to long-format CSV.
+
+\begin{lstlisting}[style=pythonstyle]
+"""Convert mapped Excel to long-format CSV."""
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from src.core.multi_sheet_loader import load_all_months_to_long
+from src.core.config import CONFIG
+
+def main():
+    source_path = CONFIG["paths"]["project_root"] / "data" / "data_sorted.xlsx"
+    output_path = CONFIG["output"]["payroll_long"]
+    
+    print(f"Loading data from: {source_path}")
+    df = load_all_months_to_long(str(source_path))
+    
+    print(f"Saving to: {output_path}")
+    df.to_csv(output_path, index=False)
+    
+    print(f"Complete! {len(df)} rows saved.")
+    print(f"Columns: {list(df.columns)}")
+
+if __name__ == '__main__':
+    main()
+\end{lstlisting}
+
+\section{Test Files}
+
+\subsection{tests/test\_monthly\_mapping\_engine.py}
+
+\textbf{Purpose:} Unit tests for mapping engine.
+
+\begin{lstlisting}[style=pythonstyle]
+"""Tests for mapping engine."""
+
+import unittest
+from src.core.normalization import _norm_label
+from src.features.payroll_processing.mapping_engine import (
+    MappingRule, RowLookup, parse_formula
+)
+
+class TestNormalization(unittest.TestCase):
+    def test_norm_label(self):
+        self.assertEqual(_norm_label("SALAIRE BASE"), "salaire base")
+        self.assertEqual(_norm_label("Salaire  Base"), "salaire base")
+        self.assertEqual(_norm_label("Côtisation"), "cotisation")
+
+class TestFormulaParser(unittest.TestCase):
+    def test_single_term(self):
+        result = parse_formula("+SALAIRE_BASE label")
+        self.assertEqual(result, [("+", "SALAIRE_BASE", "label")])
+    
+    def test_multiple_terms(self):
+        result = parse_formula("+BASE label +PRIME label")
+        self.assertEqual(len(result), 2)
+
+class TestMappingRule(unittest.TestCase):
+    def test_apply_addition(self):
+        # Mock objects needed
+        pass  # Implementation details
+
+if __name__ == '__main__':
+    unittest.main()
+\end{lstlisting}
+
+\section{File Responsibilities Summary}
+
+\begin{table}[H]
+\centering
+\footnotesize
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{File} & \textbf{Responsibility} \\
+\midrule
+config.py & Centralized configuration \\
+normalization.py & Label normalization for fuzzy matching \\
+data\_loader.py & Load CSV/Excel data \\
+multi\_sheet\_loader.py & Combine month sheets to long format \\
+import\_dialog.py & File selection dialog \\
+mapping\_gui.py & Main mapping GUI (630 lines) \\
+mapping\_engine.py & Core mapping logic, formula application \\
+dashboard\_gui.py & Interactive visualization dashboard \\
+regression\_ar1-ar4.py & AR model implementations \\
+regression\_pooled\_fe.py & Panel regression with fixed effects \\
+regression\_unpooled.py & Separate regressions per employee \\
+visualize\_all\_models.py & Compare all model results \\
+plot\_salary\_field.py & Individual field plotting \\
+generate\_synthetic\_payroll.py & Synthetic data generation \\
+run\_excel.py & Launch mapping GUI (CLI) \\
+run\_dashboard.py & Launch dashboard (CLI) \\
+run\_forecast.py & Run forecasting standalone \\
+run\_load\_data.py & Excel to CSV conversion \\
+test\_*.py & Unit tests \\
+\bottomrule
+\end{tabularx}
+\caption{File Responsibilities}
+\end{table}
+
+\section{Dependencies}
+
+\subsection{requirements.txt}
+
+\begin{lstlisting}
+pandas>=1.5.0
+numpy>=1.23.0
+matplotlib>=3.6.0
+xlwings>=0.28.0
+statsmodels>=0.14.0
+scikit-learn>=1.1.0
+openpyxl>=3.0.0
+python-dateutil>=2.8.0
+\end{lstlisting}
+
+\subsection{Package Purposes}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Package} & \textbf{Purpose} \\
+\midrule
+pandas & Data manipulation, DataFrames \\
+numpy & Numerical operations \\
+matplotlib & Plotting and visualization \\
+xlwings & Excel file I/O \\
+statsmodels & AR models, time series analysis \\
+scikit-learn & Machine learning utilities \\
+openpyxl & Excel file reading (backend) \\
+python-dateutil & Date parsing and manipulation \\
+\bottomrule
+\end{tabular}
+\caption{Python Package Dependencies}
+\end{table}
+
+\section{VBA Code Reference}
+
+\subsection{Control\_Panel\_New.xlsm Module}
+
+\textbf{Module Name:} Module1
+
+\textbf{Total Buttons:} 5
+
+\textbf{Key Subroutines:}
+
+\begin{lstlisting}[style=vbastyle]
+' Button 1: Import & Map Data
+Sub ImportAndMapData()
+    ' ... (see Chapter 4 for full code)
+End Sub
+
+' Button 2: Open Output Folder
+Sub OpenOutputFolder()
+    Shell "explorer " & Chr(34) & PROJECT_PATH & "outputs" & Chr(34), vbNormalFocus
+End Sub
+
+' Button 4: Visualize Data
+Sub VisualizeData()
+    Shell Chr(34) & PYTHON_PATH & Chr(34) & " " & _
+          Chr(34) & PROJECT_PATH & "scripts\run_dashboard.py" & Chr(34), vbNormalFocus
+End Sub
+
+' Button 5: Open Mapped Workbook
+Sub OpenMappedWorkbook()
+    Shell "explorer " & Chr(34) & PROJECT_PATH & "data\data_sorted.xlsx" & Chr(34), vbNormalFocus
+End Sub
+\end{lstlisting}
+
+\section{Key Algorithms}
+
+\subsection{Formula Parser}
+
+\begin{algorithm}[H]
+\caption{Parse Formula String}
+\begin{algorithmic}[1]
+\Require Formula string (e.g., "+BASE label +PRIME label")
+\Ensure List of (operator, key, type) tuples
+
+\State terms $\gets$ split formula by whitespace
+\State result $\gets$ empty list
+\State i $\gets$ 0
+
+\While{i < len(terms)}
+    \State operator $\gets$ terms[i][0]  \Comment{First character: +, -, *, /}
+    \State key $\gets$ terms[i][1:]  \Comment{Rest of token}
+    \State type $\gets$ terms[i+1]  \Comment{Next token: "code" or "label"}
+    
+    \State result.append((operator, key, type))
+    \State i $\gets$ i + 2
+\EndWhile
+
+\State \Return result
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Employee Block Detection}
+
+\begin{algorithm}[H]
+\caption{Detect Employee Blocks}
+\begin{algorithmic}[1]
+\Require Source sheet, ID row number
+\Ensure List of (employee\_id, column\_number) tuples
+
+\State row\_values $\gets$ read row from sheet
+\State blocks $\gets$ empty list
+
+\For{col\_idx, value in enumerate(row\_values)}
+    \If{col\_idx $\leq$ 2}
+        \State continue  \Comment{Skip code/label columns}
+    \EndIf
+    
+    \If{value is not empty}
+        \State emp\_id $\gets$ value.strip()
+        \State blocks.append((emp\_id, col\_idx))
+    \EndIf
+\EndFor
+
+\State \Return blocks
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Mapping Application}
+
+See Chapter 5, Section 5.1 for detailed algorithm.

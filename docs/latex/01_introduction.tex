@@ -1,0 +1,265 @@
+\chapter{Introduction}
+
+\section{Project Overview}
+
+The Payroll Data Processing and Analytics System is an integrated solution designed for academic research on small-medium enterprise (SME) payroll analysis. The system processes real payroll data from professors for methodology validation, then scales to synthetic datasets for statistical analysis and forecasting.
+
+\subsection{Problem Statement}
+
+Academic research on payroll data faces several challenges:
+
+\begin{itemize}
+    \item \textbf{Privacy Concerns:} Real payroll data contains sensitive employee information
+    \item \textbf{Limited Sample Size:} Real datasets from SMEs are typically small ($<$20 employees)
+    \item \textbf{Statistical Validity:} Small samples lack statistical power for robust conclusions
+    \item \textbf{Data Processing:} Excel files have inconsistent structures requiring custom mapping
+    \item \textbf{Accessibility:} Non-technical users (HR, managers) need easy-to-use interfaces
+\end{itemize}
+
+\subsection{Solution Architecture}
+
+Our system addresses these challenges through a dual-pipeline approach:
+
+\begin{enumerate}
+    \item \textbf{Real Data Pipeline:}
+    \begin{itemize}
+        \item Import Excel files with custom structures
+        \item Interactive mapping GUI for flexibility
+        \item Validation of methodology on small real dataset
+        \item Privacy-preserving (data stays local)
+    \end{itemize}
+    
+    \item \textbf{Synthetic Data Pipeline:}
+    \begin{itemize}
+        \item Generate large datasets ($>$100 employees, multiple years)
+        \item Same format as processed real data
+        \item Statistical analysis with sufficient power
+        \item Forecasting with autoregressive models
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Key Objectives}
+
+\begin{enumerate}
+    \item \textbf{Validate Methodology:} Use real data to ensure processing logic is correct
+    \item \textbf{Scale Analysis:} Use synthetic data for statistically valid conclusions
+    \item \textbf{Ensure Interchangeability:} Both pipelines produce identical CSV formats
+    \item \textbf{User-Friendly Interface:} Excel Control Panel with one-click operations
+    \item \textbf{Safe Integration:} Avoid system corruption from xlwings COM automation
+\end{enumerate}
+
+\section{System Architecture}
+
+\subsection{High-Level Architecture}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=1.5cm,
+    box/.style={rectangle, draw, fill=blue!20, text width=4cm, align=center, minimum height=1cm},
+    db/.style={cylinder, draw, fill=green!20, text width=2cm, align=center, minimum height=1cm, aspect=0.3},
+    arrow/.style={->, >=stealth, thick}
+]
+
+% Input layer
+\node[box] (real) at (0,0) {Real Payroll Data \\ (Excel)};
+\node[box] (synthetic) at (6,0) {Synthetic Data \\ Generator};
+
+% Processing layer
+\node[box] (import) at (0,-2.5) {Import Dialog \\ \& Mapping GUI};
+\node[box] (engine) at (0,-4.5) {Mapping Engine};
+\node[box] (sorted) at (0,-6.5) {data\_sorted.xlsx};
+
+\node[box] (gen) at (6,-4.5) {Multi-Sheet Loader};
+
+% Output layer
+\node[db] (csv) at (3,-8.5) {Consolidated CSV \\ (Long Format)};
+
+% Analysis layer
+\node[box] (forecast) at (0,-10.5) {AR(2) Forecasting};
+\node[box] (viz) at (3,-10.5) {10 Visualizations};
+\node[box] (stats) at (6,-10.5) {Statistical Analysis};
+
+% Arrows
+\draw[arrow] (real) -- (import);
+\draw[arrow] (import) -- (engine);
+\draw[arrow] (engine) -- (sorted);
+\draw[arrow] (sorted) -- (csv);
+
+\draw[arrow] (synthetic) -- (gen);
+\draw[arrow] (gen) -- (csv);
+
+\draw[arrow] (csv) -- (forecast);
+\draw[arrow] (csv) -- (viz);
+\draw[arrow] (csv) -- (stats);
+
+\end{tikzpicture}
+\caption{System Architecture Overview}
+\end{figure}
+
+\subsection{Component Hierarchy}
+
+The system consists of three main layers:
+
+\begin{enumerate}
+    \item \textbf{Data Import Layer}
+    \begin{itemize}
+        \item Excel Control Panel (VBA)
+        \item Import Dialog (Python + tkinter)
+        \item File selection and validation
+    \end{itemize}
+    
+    \item \textbf{Processing Layer}
+    \begin{itemize}
+        \item Mapping GUI (formula builder)
+        \item Mapping Engine (calculation engine)
+        \item CustomMap sheet (persistent storage)
+        \item CSV converter
+    \end{itemize}
+    
+    \item \textbf{Analytics Layer}
+    \begin{itemize}
+        \item Dashboard GUI (visualization)
+        \item AR(2) forecasting model
+        \item Statistical reporting
+    \end{itemize}
+\end{enumerate}
+
+\section{Technology Stack}
+
+\subsection{Programming Languages}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lXl}
+\toprule
+\textbf{Language} & \textbf{Purpose} & \textbf{Version} \\
+\midrule
+Python & Core logic, data processing, ML & 3.10 \\
+VBA & Excel macro automation & Excel 2016+ \\
+PowerShell & Automation scripts & 5.1 \\
+\bottomrule
+\end{tabularx}
+\caption{Programming Languages Used}
+\end{table}
+
+\subsection{Python Libraries}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lXl}
+\toprule
+\textbf{Library} & \textbf{Purpose} & \textbf{Version} \\
+\midrule
+xlwings & Excel file I/O & 0.30.0 \\
+pandas & Data manipulation & 2.3.0 \\
+numpy & Numerical operations & 2.1.2 \\
+matplotlib & Plotting & 3.10.3 \\
+statsmodels & Time series forecasting & 0.14.6 \\
+tkinter & GUI framework & Built-in \\
+scipy & Statistical functions & 1.15.3 \\
+\bottomrule
+\end{tabularx}
+\caption{Python Dependencies}
+\end{table}
+
+\subsection{Design Patterns}
+
+The system employs several software design patterns:
+
+\begin{description}
+    \item[MVC Pattern] Separation of GUI (View), data processing (Model), and control logic (Controller)
+    \item[Factory Pattern] Dynamic creation of mapping rules based on user input
+    \item[Observer Pattern] GUI updates when data changes
+    \item[Strategy Pattern] Interchangeable mapping operators (+, -, *, /)
+    \item[Singleton Pattern] Single instance of dashboard GUI
+\end{description}
+
+\section{Project Structure}
+
+\begin{figure}[H]
+\begin{forest}
+  for tree={
+    font=\ttfamily,
+    grow'=0,
+    child anchor=west,
+    parent anchor=south,
+    anchor=west,
+    calign=first,
+    edge path={
+      \noexpand\path [draw, \forestoption{edge}]
+      (!u.south west) +(7.5pt,0) |- node[fill,inner sep=1.25pt] {} (.child anchor)\forestoption{edge label};
+    },
+    before typesetting nodes={
+      if n=1
+        {insert before={[,phantom]}}
+        {}
+    },
+    fit=band,
+    before computing xy={l=15pt},
+  }
+[Integrated Project/
+  [data/
+    [raw/
+      [essai donnees paye.xlsx]
+      [data\_sorted.xlsx]
+    ]
+  ]
+  [docs/
+    [CONTROL\_PANEL\_GUIDE.md]
+    [DASHBOARD\_GUIDE.md]
+    [latex/]
+  ]
+  [outputs/
+    [payroll\_long.csv]
+    [payroll\_mapped\_long.csv]
+    [results\_*.csv]
+  ]
+  [scripts/
+    [run\_dashboard.py]
+    [run\_mapped\_data\_loader.py]
+  ]
+  [src/
+    [core/
+      [config.py]
+      [data\_loader.py]
+      [multi\_sheet\_loader.py]
+      [normalization.py]
+    ]
+    [data generation/
+      [generate\_synthetic\_payroll.py]
+    ]
+    [excel\_tools/
+      [import\_dialog.py]
+      [mapping\_utils.py]
+    ]
+    [features/
+      [analytics/
+        [dashboard\_gui.py]
+        [regression\_*.py]
+      ]
+    ]
+  ]
+  [tests/
+    [mapped\_data\_loader.py]
+    [test\_monthly\_mapping\_engine.py]
+  ]
+  [Control\_Panel\_New.xlsm]
+]
+\end{forest}
+\caption{Project Directory Structure}
+\end{figure}
+
+\section{Development Timeline}
+
+This system was developed in a single day (December 28, 2025) through iterative refinement:
+
+\begin{enumerate}
+    \item \textbf{Morning:} Code optimization - created shared utilities, removed 150+ lines of duplication
+    \item \textbf{Afternoon:} Feature additions - dynamic labels, automatic execution, CSV generation
+    \item \textbf{Evening:} Format alignment - ensured real and synthetic data produce identical outputs
+    \item \textbf{Night:} Safe Excel interface - VBA Shell approach to avoid xlwings corruption
+    \item \textbf{Late Night:} Visualization dashboard - 10 plots with AR(2) forecasting
+\end{enumerate}
+
+Each iteration maintained backward compatibility while adding functionality.

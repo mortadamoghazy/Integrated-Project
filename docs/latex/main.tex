@@ -1,0 +1,219 @@
+\documentclass[12pt,a4paper]{report}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tocloft}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{tikz}
+\usepackage{forest}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{caption}
+\usepackage{subcaption}
+
+% Page setup
+\geometry{
+    left=2.5cm,
+    right=2.5cm,
+    top=3cm,
+    bottom=3cm
+}
+
+% Colors for code listings
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+% Python code style
+\lstdefinestyle{pythonstyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2,
+    language=Python
+}
+
+% VBA code style
+\lstdefinestyle{vbastyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{blue},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{red},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=pythonstyle}
+
+% Hyperref setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    pdftitle={Payroll Data Processing and Analytics System},
+    pdfpagemode=FullScreen,
+}
+
+% Header/Footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\leftmark}
+\fancyhead[R]{\thepage}
+\fancyfoot[C]{Payroll Analytics System - Technical Documentation}
+
+% Title page
+\title{
+    \vspace{2cm}
+    \Huge\textbf{Payroll Data Processing \\ and Analytics System}\\
+    \vspace{1cm}
+    \Large Technical Documentation and Implementation Guide\\
+    \vspace{1cm}
+    \large December 28, 2025
+}
+\author{
+    \Large MARS Integrated Project\\
+    \vspace{0.5cm}
+    \normalsize Academic Payroll Analysis Research
+}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+
+This document provides comprehensive technical documentation for the Payroll Data Processing and Analytics System developed for academic research purposes. The system integrates Excel-based data import, custom mapping engine, automated CSV generation, and interactive visualization dashboard with forecasting capabilities.
+
+\textbf{Key Features:}
+\begin{itemize}
+    \item Safe Excel integration without COM automation corruption
+    \item Interactive mapping GUI with persistent storage
+    \item Autoregressive forecasting (AR2 model)
+    \item 10 comprehensive visualization options
+    \item Real and synthetic data processing pipelines
+\end{itemize}
+
+\textbf{Technologies:} Python 3.10, xlwings, tkinter, pandas, matplotlib, statsmodels, VBA, Excel 2016+
+
+\tableofcontents
+
+% Include all sections
+\include{01_introduction}
+\include{02_architecture}
+\include{03_data_flow}
+\include{04_excel_integration}
+\include{05_mapping_engine}
+\include{06_visualization}
+\include{07_forecasting}
+\include{08_usage_guide}
+\include{09_code_reference}
+
+\chapter*{Conclusion}
+\addcontentsline{toc}{chapter}{Conclusion}
+
+This payroll analytics system demonstrates a complete end-to-end solution for processing real-world payroll data, validating methodologies, and performing statistical analysis on synthetic datasets. The modular architecture allows for easy extension and maintenance.
+
+\section*{Key Achievements}
+
+\begin{enumerate}
+    \item \textbf{Safe Excel Integration:} Developed VBA Shell-based approach avoiding xlwings corruption
+    \item \textbf{Flexible Mapping Engine:} Formula-based system with persistent storage
+    \item \textbf{Accurate Forecasting:} AR(2) model validated as most accurate through extensive testing
+    \item \textbf{Comprehensive Visualization:} 10 executive-level dashboards for decision support
+    \item \textbf{Data Format Alignment:} Real and synthetic data produce identical CSV formats
+\end{enumerate}
+
+\section*{Future Work}
+
+Potential enhancements include:
+\begin{itemize}
+    \item Web-based dashboard (Flask/Django)
+    \item Database backend (PostgreSQL)
+    \item Automated email reports
+    \item Role-based access control
+    \item Multi-company support
+    \item Advanced forecasting (LSTM, Prophet)
+\end{itemize}
+
+\appendix
+\chapter{Installation Guide}
+
+\section{System Requirements}
+\begin{itemize}
+    \item Windows 10/11
+    \item Python 3.10+
+    \item Microsoft Excel 2016+
+    \item 8GB RAM minimum
+\end{itemize}
+
+\section{Python Dependencies}
+\begin{lstlisting}[style=pythonstyle]
+pip install xlwings==0.30.0
+pip install pandas==2.3.0
+pip install numpy==2.1.2
+pip install matplotlib==3.10.3
+pip install statsmodels==0.14.6
+pip install scipy==1.15.3
+\end{lstlisting}
+
+\section{Excel VBA Trust Settings}
+\begin{enumerate}
+    \item Open Excel Options
+    \item Navigate to Trust Center $\rightarrow$ Trust Center Settings
+    \item Go to Macro Settings
+    \item Enable "Trust access to the VBA project object model"
+    \item Click OK
+\end{enumerate}
+
+\chapter{Glossary}
+
+\begin{description}
+    \item[AR(2)] Autoregressive model of order 2 - uses past 2 time steps to predict future
+    \item[COM] Component Object Model - Windows technology for inter-process communication
+    \item[CSV] Comma-Separated Values file format
+    \item[GUI] Graphical User Interface
+    \item[NRMSE] Normalized Root Mean Squared Error - accuracy metric
+    \item[Shell] Windows command to launch external programs
+    \item[VBA] Visual Basic for Applications - Excel macro language
+    \item[xlwings] Python library for Excel automation
+\end{description}
+
+\end{document}
