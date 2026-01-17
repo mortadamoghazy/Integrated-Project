@@ -26,6 +26,7 @@ project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from statsmodels.tsa.ar_model import AutoReg
+from src.features.analytics.employee_clustering import EmployeeClustering
 
 
 class PayrollDashboard:
@@ -88,6 +89,7 @@ class PayrollDashboard:
             ("7. Gross vs Net Salary", self.plot_gross_vs_net),
             ("8. Headcount Trend", self.plot_headcount_trend),
             ("9. Year-over-Year Comparison", self.plot_yoy_comparison),
+            ("10. Employee Clustering (K-Means ML)", self.plot_clustering),
         ]
         
         for text, command in self.plot_buttons:
@@ -798,6 +800,107 @@ class PayrollDashboard:
         canvas = FigureCanvasTkAgg(fig, self.plot_frame)
         canvas.draw()
         canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+    
+    def plot_clustering(self):
+        """Plot 10: Employee clustering using K-Means ML."""
+        if self.df is None:
+            messagebox.showwarning("No Data", "Please load data first")
+            return
+        
+        # Clustering works on all employees, disable individual employee selector
+        self._set_scope_controls(emp_enabled=False, month_enabled=False)
+        
+        self.clear_plot()
+        
+        # Ask user for number of clusters
+        dialog = tk.Toplevel(self.root)
+        dialog.title("K-Means Clustering Configuration")
+        dialog.geometry("400x250")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        
+        ttk.Label(dialog, text="K-Means Clustering Settings", 
+                 font=("Arial", 12, "bold")).pack(pady=10)
+        
+        # Number of clusters
+        frame1 = ttk.Frame(dialog)
+        frame1.pack(pady=10)
+        ttk.Label(frame1, text="Number of Clusters (K):", 
+                 font=("Arial", 10)).pack(side=tk.LEFT, padx=5)
+        k_var = tk.IntVar(value=3)
+        k_spinbox = ttk.Spinbox(frame1, from_=2, to=min(8, len(self.df['employee_id'].unique())-1), 
+                               textvariable=k_var, width=10)
+        k_spinbox.pack(side=tk.LEFT)
+        
+        # Visualization type
+        frame2 = ttk.Frame(dialog)
+        frame2.pack(pady=10)
+        ttk.Label(frame2, text="Visualization:", 
+                 font=("Arial", 10)).pack(side=tk.LEFT, padx=5)
+        viz_var = tk.StringVar(value='2d_scatter')
+        viz_options = [
+            ('2D Cluster Map (PCA)', '2d_scatter'),
+            ('Cluster Profiles', 'profiles'),
+            ('Elbow & Silhouette', 'optimization')
+        ]
+        for text, value in viz_options:
+            ttk.Radiobutton(frame2, text=text, variable=viz_var, 
+                          value=value).pack(anchor='w', padx=20)
+        
+        result = {'confirmed': False}
+        
+        def on_ok():
+            result['confirmed'] = True
+            result['k'] = k_var.get()
+            result['viz'] = viz_var.get()
+            dialog.destroy()
+        
+        def on_cancel():
+            dialog.destroy()
+        
+        # Buttons
+        btn_frame = ttk.Frame(dialog)
+        btn_frame.pack(pady=15)
+        ttk.Button(btn_frame, text="Run Clustering", command=on_ok).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Cancel", command=on_cancel).pack(side=tk.LEFT, padx=5)
+        
+        dialog.wait_window()
+        
+        if not result['confirmed']:
+            return
+        
+        # Run clustering
+        try:
+            clustering = EmployeeClustering(self.df, n_clusters=result['k'])
+            clustering.fit()
+            
+            # Generate selected visualization
+            if result['viz'] == '2d_scatter':
+                fig = clustering.plot_clusters_2d()
+            elif result['viz'] == 'profiles':
+                fig = clustering.plot_cluster_profiles()
+            else:  # optimization
+                fig = clustering.plot_elbow_silhouette()
+            
+            # Show cluster summary
+            profiles = clustering.get_cluster_profiles()
+            summary = f"K-Means Clustering Results (K={result['k']})\n"
+            summary += f"Silhouette Score: {clustering.silhouette:.3f}\n\n"
+            for _, row in profiles.iterrows():
+                summary += f"Cluster {int(row['cluster_id'])}: "
+                summary += f"{int(row['size'])} employees, "
+                summary += f"Avg Cost: ${row['avg_total_cost']:,.0f}\n"
+            
+            messagebox.showinfo("Clustering Complete", summary)
+            
+            # Display figure
+            canvas = FigureCanvasTkAgg(fig, self.plot_frame)
+            canvas.draw()
+            canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+            
+        except Exception as e:
+            messagebox.showerror("Clustering Error", 
+                               f"Failed to perform clustering:\n{str(e)}")
     
     def run(self):
         """Run the dashboard."""
