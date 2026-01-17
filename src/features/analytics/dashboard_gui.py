@@ -37,6 +37,10 @@ class PayrollDashboard:
         # Data
         self.df: Optional[pd.DataFrame] = None
         self.data_path = project_root / "outputs" / "payroll_long.csv"
+
+        # Selection controls (populated after load)
+        self.emp_var = tk.StringVar(value='All')
+        self.month_var = tk.StringVar(value='All')
         
         # Style
         style = ttk.Style()
@@ -83,13 +87,29 @@ class PayrollDashboard:
             ("6. Top 10 Most Expensive Employees", self.plot_top_employees),
             ("7. Gross vs Net Salary", self.plot_gross_vs_net),
             ("8. Headcount Trend", self.plot_headcount_trend),
-            ("9. Monthly Burn Rate Dashboard", self.plot_burn_rate),
-            ("10. Year-over-Year Comparison", self.plot_yoy_comparison),
+            ("9. Year-over-Year Comparison", self.plot_yoy_comparison),
         ]
         
         for text, command in self.plot_buttons:
             btn = ttk.Button(left_panel, text=text, command=command, width=35)
             btn.pack(pady=3, padx=5)
+
+        # Scope selectors: Employee and Month
+        ttk.Separator(left_panel, orient='horizontal').pack(fill='x', pady=10)
+        scope_label = ttk.Label(left_panel, text="Plot Scope:", font=("Arial", 11, "bold"))
+        scope_label.pack(pady=(5, 2))
+
+        ttk.Label(left_panel, text="Employee:", font=("Arial", 9)).pack(anchor='w', padx=5)
+        self.emp_cb = ttk.Combobox(left_panel, textvariable=self.emp_var, state='readonly')
+        self.emp_cb['values'] = ['All']
+        self.emp_cb.current(0)
+        self.emp_cb.pack(fill='x', padx=5, pady=2)
+
+        ttk.Label(left_panel, text="Month:", font=("Arial", 9)).pack(anchor='w', padx=5)
+        self.month_cb = ttk.Combobox(left_panel, textvariable=self.month_var, state='readonly')
+        self.month_cb['values'] = ['All']
+        self.month_cb.current(0)
+        self.month_cb.pack(fill='x', padx=5, pady=(2, 6))
         
         # Refresh data button
         ttk.Separator(left_panel, orient='horizontal').pack(fill='x', pady=10)
@@ -153,6 +173,15 @@ class PayrollDashboard:
                               f"Records: {len(self.df)}\n"
                               f"Employees: {employees}\n"
                               f"Period: {date_range}")
+
+            # Populate employee and month selectors
+            emp_list = ['All'] + sorted(self.df['employee_id'].unique())
+            months = ['All'] + sorted(self.df['month'].dt.strftime('%Y-%m').unique())
+            try:
+                self.emp_cb['values'] = emp_list
+                self.month_cb['values'] = months
+            except Exception:
+                pass
             
         except Exception as e:
             self.info_label.config(text="❌ Error loading data")
@@ -162,6 +191,48 @@ class PayrollDashboard:
         """Clear the current plot."""
         for widget in self.plot_frame.winfo_children():
             widget.destroy()
+
+    def _apply_scope_filters(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Apply selected employee/month scope filters to a dataframe."""
+        df2 = df.copy()
+        emp_sel = self.emp_var.get() if hasattr(self, 'emp_var') else 'All'
+        month_sel = self.month_var.get() if hasattr(self, 'month_var') else 'All'
+
+        if emp_sel and emp_sel != 'All':
+            # Employee IDs may be numeric in the dataframe but the combobox
+            # stores strings; compare using string form for robustness.
+            df2 = df2[df2['employee_id'].astype(str) == str(emp_sel)]
+
+        if month_sel and month_sel != 'All':
+            try:
+                # month_sel is in 'YYYY-MM' format; match using string comparison
+                df2 = df2[df2['month'].dt.strftime('%Y-%m') == month_sel]
+            except Exception:
+                pass
+
+        return df2
+
+    def _set_scope_controls(self, emp_enabled: bool = True, month_enabled: bool = True):
+        """Enable or disable employee/month scope controls depending on plot context.
+
+        When disabling a control, reset its selection to 'All' to avoid filtering by an
+        invalid value.
+        """
+        try:
+            if emp_enabled:
+                self.emp_cb.config(state='readonly')
+            else:
+                self.emp_cb.config(state='disabled')
+                self.emp_var.set('All')
+
+            if month_enabled:
+                self.month_cb.config(state='readonly')
+            else:
+                self.month_cb.config(state='disabled')
+                self.month_var.set('All')
+        except Exception:
+            # If controls not yet created or any error, silently continue
+            pass
     
     def plot_total_cost_trend(self):
         """Plot 1: Total payroll cost trend over time."""
@@ -169,10 +240,20 @@ class PayrollDashboard:
             messagebox.showwarning("No Data", "Please load data first")
             return
         
+        # enable both selectors for this plot
+        self._set_scope_controls(emp_enabled=True, month_enabled=True)
+
         self.clear_plot()
         
+        # Apply scope filters (employee/month)
+        df_used = self._apply_scope_filters(self.df)
+
+        if df_used.empty:
+            messagebox.showinfo("No Data", "No data available for the selected employee/month scope.")
+            return
+
         # Calculate monthly totals
-        monthly_cost = self.df.groupby('month')['total_cost'].sum().reset_index()
+        monthly_cost = df_used.groupby('month')['total_cost'].sum().reset_index()
         
         # Create plot
         fig, ax = plt.subplots(figsize=(12, 6))
@@ -188,10 +269,24 @@ class PayrollDashboard:
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
         plt.xticks(rotation=45, ha='right')
         
-        # Add value labels
-        for x, y in zip(monthly_cost['month'], monthly_cost['total_cost']):
-            ax.annotate(f'${y:,.0f}', (x, y), textcoords="offset points", 
-                       xytext=(0, 10), ha='center', fontsize=8)
+        # Add value labels (reduce density to avoid overlap)
+        n_points = len(monthly_cost)
+        max_labels = 12
+        step = max(1, int(np.ceil(n_points / max_labels)))
+        for i, (x, y) in enumerate(zip(monthly_cost['month'], monthly_cost['total_cost'])):
+            # only label a subset of points (roughly `max_labels`), always include last
+            if (i % step == 0) or (i == n_points - 1):
+                # alternate upward/downward offsets to reduce collisions
+                offset = 10 if ((i // step) % 2 == 0) else -12
+                va = 'bottom' if offset > 0 else 'top'
+                ax.annotate(f'${y:,.0f}', (x, y), textcoords="offset points",
+                           xytext=(0, offset), ha='center', va=va, fontsize=8,
+                           bbox=dict(boxstyle='round,pad=0.2', fc='white', alpha=0.6, linewidth=0))
+
+        # Add a little vertical margin so top labels don't get clipped
+        ymin, ymax = ax.get_ylim()
+        yrange = ymax - ymin
+        ax.set_ylim(ymin - 0.02 * yrange, ymax + 0.06 * yrange)
         
         plt.tight_layout()
         
@@ -206,45 +301,82 @@ class PayrollDashboard:
             messagebox.showwarning("No Data", "Please load data first")
             return
         
+        # allow both emp/month scope for forecasting
+        self._set_scope_controls(emp_enabled=True, month_enabled=True)
+
         self.clear_plot()
-        
+
+        # Apply scope filters (employee/month)
+        df_used = self._apply_scope_filters(self.df)
+
+        if df_used.empty:
+            messagebox.showinfo("No Data", "No data available for the selected employee/month scope.")
+            return
+
         # Calculate monthly totals
-        monthly_cost = self.df.groupby('month')['total_cost'].sum().reset_index()
+        monthly_cost = df_used.groupby('month')['total_cost'].sum().reset_index()
         monthly_cost = monthly_cost.sort_values('month')
-        
+
         # Fit AR(2) model
         try:
             ts_data = monthly_cost['total_cost'].values
             model = AutoReg(ts_data, lags=2)
             fitted_model = model.fit()
-            
+
             # Forecast 6 months ahead
             forecast_steps = 6
             forecast = fitted_model.forecast(steps=forecast_steps)
-            
+
             # Create future dates
             last_date = monthly_cost['month'].iloc[-1]
-            future_dates = pd.date_range(start=last_date, periods=forecast_steps+1, 
-                                        freq='MS')[1:]
-            
+            future_dates = pd.date_range(start=last_date, periods=forecast_steps+1, freq='MS')[1:]
+
             # Create plot
             fig, ax = plt.subplots(figsize=(12, 6))
-            
+
             # Historical data
-            ax.plot(monthly_cost['month'], monthly_cost['total_cost'], 
-                   marker='o', label='Historical', linewidth=2, markersize=8, 
-                   color='#2E86AB')
-            
+            ax.plot(monthly_cost['month'], monthly_cost['total_cost'], marker='o', label='Historical',
+                    linewidth=2, markersize=8, color='#2E86AB')
+
             # Forecast
-            ax.plot(future_dates, forecast, marker='s', label='Forecast (AR2)', 
-                   linewidth=2, markersize=8, color='#A23B72', linestyle='--')
-            
-            # Confidence interval (simple estimation)
-            std_error = np.std(fitted_model.resid)
-            conf_upper = forecast + 1.96 * std_error
-            conf_lower = forecast - 1.96 * std_error
+            ax.plot(future_dates, forecast, marker='s', label='Forecast (AR2)',
+                    linewidth=2, markersize=8, color='#A23B72', linestyle='--')
+
+            # Derive an error percentage from the fitted AR2 model (MAPE) and
+            # use it to construct a percentage-based CI around the forecast.
+            # Fall back to the residual-std method if MAPE can't be computed.
+            try:
+                # Attempt to get in-sample fitted values and align with actuals
+                if hasattr(fitted_model, 'fittedvalues'):
+                    fitted_vals = np.asarray(fitted_model.fittedvalues)
+                    # aligned actuals correspond to the last len(fitted_vals) points
+                    actuals = ts_data[-len(fitted_vals):]
+                    # avoid division by zero
+                    denom = np.where(actuals == 0, np.nan, actuals)
+                    mape = np.nanmean(np.abs((actuals - fitted_vals) / denom)) * 100.0
+                else:
+                    raise AttributeError("no fittedvalues")
+
+                # Validate MAPE
+                if not np.isfinite(mape) or mape <= 0:
+                    raise ValueError("invalid mape")
+
+                # Build CI as forecast ± mape% (simple, interpretable)
+                conf_upper = forecast * (1.0 + mape / 100.0)
+                conf_lower = forecast * (1.0 - mape / 100.0)
+                ci_label = f'Error band (MAPE {mape:.1f}%)'
+                # annotate MAPE on plot
+                ax.text(0.99, 0.02, f'MAPE (in-sample): {mape:.1f}%', transform=ax.transAxes,
+                        ha='right', va='bottom', fontsize=9, bbox=dict(boxstyle='round', fc='white', alpha=0.6))
+            except Exception:
+                # fallback: use residual standard deviation * 1.96
+                std_error = np.std(fitted_model.resid)
+                conf_upper = forecast + 1.96 * std_error
+                conf_lower = forecast - 1.96 * std_error
+                ci_label = 'Error band (std resid)'
+
             ax.fill_between(future_dates, conf_lower, conf_upper, 
-                           alpha=0.2, color='#A23B72', label='95% CI')
+                           alpha=0.2, color='#A23B72', label=ci_label)
             
             ax.set_title('Payroll Cost Forecasting (AR2 Model)', 
                         fontsize=16, fontweight='bold', pad=20)
@@ -273,10 +405,20 @@ class PayrollDashboard:
             messagebox.showwarning("No Data", "Please load data first")
             return
         
+        # this plot can be scoped by employee/month
+        self._set_scope_controls(emp_enabled=True, month_enabled=True)
+
         self.clear_plot()
         
+        # Apply scope filters (employee/month)
+        df_used = self._apply_scope_filters(self.df)
+
+        if df_used.empty:
+            messagebox.showinfo("No Data", "No data available for the selected employee/month scope.")
+            return
+
         # Calculate monthly averages
-        monthly_avg = self.df.groupby('month').agg({
+        monthly_avg = df_used.groupby('month').agg({
             'total_cost': 'mean',
             'employee_id': 'count'
         }).reset_index()
@@ -317,10 +459,20 @@ class PayrollDashboard:
             messagebox.showwarning("No Data", "Please load data first")
             return
         
+        # allow scoping for breakdown
+        self._set_scope_controls(emp_enabled=True, month_enabled=True)
+
         self.clear_plot()
-        
+
+        # Apply scope filters (employee/month)
+        df_used = self._apply_scope_filters(self.df)
+
+        if df_used.empty:
+            messagebox.showinfo("No Data", "No data available for the selected employee/month scope.")
+            return
+
         # Calculate monthly component totals
-        monthly_breakdown = self.df.groupby('month').agg({
+        monthly_breakdown = df_used.groupby('month').agg({
             'salaire_brut': 'sum',
             'cot_patronale': 'sum',
             'avantages': 'sum'
@@ -361,40 +513,43 @@ class PayrollDashboard:
             messagebox.showwarning("No Data", "Please load data first")
             return
         
+        # This plot supports scoping by employee and month
+        self._set_scope_controls(emp_enabled=True, month_enabled=True)
+
         self.clear_plot()
+
+        # Apply scope filters (employee/month)
+        df_used = self._apply_scope_filters(self.df)
+
+        if df_used.empty:
+            messagebox.showinfo("No Data", "No data available for the selected employee/month scope.")
+            return
+
+        # Determine month to use: if month selected, df_used already filtered to that month
+        if self.month_var.get() and self.month_var.get() != 'All':
+            latest_data = df_used.copy()
+            latest_month = latest_data['month'].max() if not latest_data.empty else None
+        else:
+            latest_month = df_used['month'].max()
+            latest_data = df_used[df_used['month'] == latest_month]
         
-        # Get latest month data
-        latest_month = self.df['month'].max()
-        latest_data = self.df[self.df['month'] == latest_month]
-        
-        # Create plot
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
-        
-        # Box plot
-        bp = ax1.boxplot([latest_data['total_cost']], vert=True, patch_artist=True,
-                         labels=[latest_month.strftime('%Y-%m')])
-        bp['boxes'][0].set_facecolor('#2E86AB')
-        bp['boxes'][0].set_alpha(0.7)
-        ax1.set_title('Employee Cost Distribution (Latest Month)', 
-                     fontsize=14, fontweight='bold')
-        ax1.set_ylabel('Total Cost ($)', fontsize=11)
-        ax1.grid(True, alpha=0.3, axis='y')
-        
-        # Histogram
-        ax2.hist(latest_data['total_cost'], bins=20, color='#A23B72', 
-                alpha=0.7, edgecolor='black')
-        ax2.axvline(latest_data['total_cost'].mean(), color='red', 
-                   linestyle='--', linewidth=2, label=f"Mean: ${latest_data['total_cost'].mean():,.0f}")
-        ax2.axvline(latest_data['total_cost'].median(), color='green', 
-                   linestyle='--', linewidth=2, label=f"Median: ${latest_data['total_cost'].median():,.0f}")
-        ax2.set_title('Cost Distribution Histogram', fontsize=14, fontweight='bold')
-        ax2.set_xlabel('Total Cost ($)', fontsize=11)
-        ax2.set_ylabel('Number of Employees', fontsize=11)
-        ax2.legend(fontsize=9)
-        ax2.grid(True, alpha=0.3, axis='y')
-        
+        # Create single histogram plot (removed boxplot)
+        fig, ax = plt.subplots(figsize=(12, 6))
+
+        ax.hist(latest_data['total_cost'], bins=20, color='#A23B72', 
+            alpha=0.7, edgecolor='black')
+        mean_val = latest_data['total_cost'].mean()
+        med_val = latest_data['total_cost'].median()
+        ax.axvline(mean_val, color='red', linestyle='--', linewidth=2, label=f"Mean: ${mean_val:,.0f}")
+        ax.axvline(med_val, color='green', linestyle='--', linewidth=2, label=f"Median: ${med_val:,.0f}")
+        ax.set_title('Employee Cost Distribution (Latest Month)', fontsize=14, fontweight='bold')
+        ax.set_xlabel('Total Cost ($)', fontsize=11)
+        ax.set_ylabel('Number of Employees', fontsize=11)
+        ax.legend(fontsize=9)
+        ax.grid(True, alpha=0.3, axis='y')
+
         plt.tight_layout()
-        
+
         canvas = FigureCanvasTkAgg(fig, self.plot_frame)
         canvas.draw()
         canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
@@ -405,14 +560,39 @@ class PayrollDashboard:
             messagebox.showwarning("No Data", "Please load data first")
             return
         
+        # For Top 10 employees we do NOT allow selecting specific employees
+        # (that would be contradictory). Allow selecting month only.
+        self._set_scope_controls(emp_enabled=False, month_enabled=True)
+
         self.clear_plot()
-        
-        # Get latest month data
-        latest_month = self.df['month'].max()
-        latest_data = self.df[self.df['month'] == latest_month].copy()
-        
-        # Top 10
-        top10 = latest_data.nlargest(10, 'total_cost').sort_values('total_cost')
+
+        # Apply scope filters (employee/month)
+        df_used = self._apply_scope_filters(self.df)
+
+        if df_used.empty:
+            messagebox.showinfo("No Data", "No data available for the selected employee/month scope.")
+            return
+
+        # If the user selected 'All' months, compute per-employee average across
+        # all months and pick the top 10 by that average. Otherwise pick top 10
+        # within the selected month.
+        if self.month_var.get() and self.month_var.get() != 'All':
+            try:
+                sel_month = pd.to_datetime(self.month_var.get() + '-01')
+            except Exception:
+                sel_month = df_used['month'].max()
+            month_data = df_used[df_used['month'] == sel_month].copy()
+            if month_data.empty:
+                messagebox.showinfo("No Data", "No records for the selected month.")
+                return
+            emp_tot = month_data.groupby('employee_id')['total_cost'].sum().reset_index()
+            top10 = emp_tot.nlargest(10, 'total_cost').sort_values('total_cost')
+            title_period = sel_month.strftime('%Y-%m')
+        else:
+            # average across all months for each employee
+            emp_avg = df_used.groupby('employee_id')['total_cost'].mean().reset_index()
+            top10 = emp_avg.nlargest(10, 'total_cost').sort_values('total_cost')
+            title_period = 'All months (avg)'
         
         # Create plot
         fig, ax = plt.subplots(figsize=(12, 8))
@@ -422,8 +602,8 @@ class PayrollDashboard:
         ax.set_yticklabels(top10['employee_id'])
         ax.set_xlabel('Total Cost ($)', fontsize=12)
         ax.set_ylabel('Employee ID', fontsize=12)
-        ax.set_title(f'Top 10 Most Expensive Employees ({latest_month.strftime("%Y-%m")})', 
-                    fontsize=16, fontweight='bold', pad=20)
+        ax.set_title(f'Top 10 Most Expensive Employees ({title_period})', 
+                fontsize=16, fontweight='bold', pad=20)
         ax.grid(True, alpha=0.3, axis='x')
         
         # Add value labels
@@ -443,6 +623,10 @@ class PayrollDashboard:
             messagebox.showwarning("No Data", "Please load data first")
             return
         
+        # For Gross vs Net we use an internal employee selector dialog, disable
+        # the global employee combobox to avoid confusion.
+        self._set_scope_controls(emp_enabled=False, month_enabled=True)
+
         # Employee selection dialog
         dialog = tk.Toplevel(self.root)
         dialog.title("Select Employees")
@@ -536,10 +720,22 @@ class PayrollDashboard:
         ax.fill_between(headcount['month'], headcount['headcount'], 
                        alpha=0.3, color='#2E86AB')
         
-        # Add value labels
-        for x, y in zip(headcount['month'], headcount['headcount']):
-            ax.annotate(f'{int(y)}', (x, y), textcoords="offset points", 
-                       xytext=(0, 10), ha='center', fontsize=10, fontweight='bold')
+        # Add value labels (reduce density to avoid overlap)
+        n_points = len(headcount)
+        max_labels = 12
+        step = max(1, int(np.ceil(n_points / max_labels)))
+        for i, (x, y) in enumerate(zip(headcount['month'], headcount['headcount'])):
+            if (i % step == 0) or (i == n_points - 1):
+                offset = 8 if ((i // step) % 2 == 0) else -10
+                va = 'bottom' if offset > 0 else 'top'
+                ax.annotate(f'{int(y)}', (x, y), textcoords="offset points",
+                           xytext=(0, offset), ha='center', va=va, fontsize=10, fontweight='bold',
+                           bbox=dict(boxstyle='round,pad=0.2', fc='white', alpha=0.6, linewidth=0))
+
+        # Small y-margin so labels don't overlap axes
+        ymin, ymax = ax.get_ylim()
+        yrange = ymax - ymin
+        ax.set_ylim(max(0, ymin - 0.02 * yrange), ymax + 0.05 * yrange)
         
         ax.set_title('Employee Headcount Trend', fontsize=16, fontweight='bold', pad=20)
         ax.set_xlabel('Month', fontsize=12)
@@ -557,77 +753,7 @@ class PayrollDashboard:
         canvas.draw()
         canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
     
-    def plot_burn_rate(self):
-        """Plot 9: Monthly burn rate dashboard."""
-        if self.df is None:
-            messagebox.showwarning("No Data", "Please load data first")
-            return
-        
-        self.clear_plot()
-        
-        # Calculate components
-        monthly_data = self.df.groupby('month').agg({
-            'total_cost': 'sum',
-            'salaire_brut': 'sum',
-            'cot_patronale': 'sum',
-            'avantages': 'sum',
-            'employee_id': 'nunique'
-        }).reset_index()
-        
-        # Create dashboard
-        fig = plt.figure(figsize=(14, 10))
-        gs = fig.add_gridspec(3, 2, hspace=0.3, wspace=0.3)
-        
-        # Total burn rate
-        ax1 = fig.add_subplot(gs[0, :])
-        ax1.bar(monthly_data['month'], monthly_data['total_cost'], 
-               color='#C73E1D', alpha=0.7, edgecolor='black')
-        ax1.set_title('Monthly Burn Rate', fontsize=14, fontweight='bold')
-        ax1.set_ylabel('Total Cost ($)', fontsize=11)
-        ax1.grid(True, alpha=0.3, axis='y')
-        ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-        plt.setp(ax1.xaxis.get_majorticklabels(), rotation=45, ha='right')
-        
-        # Components breakdown
-        ax2 = fig.add_subplot(gs[1, 0])
-        latest = monthly_data.iloc[-1]
-        components = ['Gross\nSalary', 'Employer\nContrib', 'Benefits']
-        values = [latest['salaire_brut'], latest['cot_patronale'], latest['avantages']]
-        colors = ['#2E86AB', '#A23B72', '#F18F01']
-        ax2.pie(values, labels=components, autopct='%1.1f%%', colors=colors, startangle=90)
-        ax2.set_title(f'Cost Components ({monthly_data["month"].iloc[-1].strftime("%Y-%m")})', 
-                     fontsize=12, fontweight='bold')
-        
-        # Average per employee
-        ax3 = fig.add_subplot(gs[1, 1])
-        monthly_data['avg_per_emp'] = monthly_data['total_cost'] / monthly_data['employee_id']
-        ax3.plot(monthly_data['month'], monthly_data['avg_per_emp'], 
-                marker='o', linewidth=2, color='#F18F01')
-        ax3.set_title('Average Cost per Employee', fontsize=12, fontweight='bold')
-        ax3.set_ylabel('Cost ($)', fontsize=10)
-        ax3.grid(True, alpha=0.3)
-        ax3.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-        plt.setp(ax3.xaxis.get_majorticklabels(), rotation=45, ha='right')
-        
-        # Cumulative burn
-        ax4 = fig.add_subplot(gs[2, :])
-        monthly_data['cumulative'] = monthly_data['total_cost'].cumsum()
-        ax4.fill_between(monthly_data['month'], monthly_data['cumulative'], 
-                        alpha=0.5, color='#2E86AB')
-        ax4.plot(monthly_data['month'], monthly_data['cumulative'], 
-                marker='o', linewidth=2, color='#2E86AB')
-        ax4.set_title('Cumulative Burn', fontsize=14, fontweight='bold')
-        ax4.set_xlabel('Month', fontsize=11)
-        ax4.set_ylabel('Cumulative Cost ($)', fontsize=11)
-        ax4.grid(True, alpha=0.3)
-        ax4.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-        plt.setp(ax4.xaxis.get_majorticklabels(), rotation=45, ha='right')
-        
-        fig.suptitle('Monthly Burn Rate Dashboard', fontsize=16, fontweight='bold', y=0.995)
-        
-        canvas = FigureCanvasTkAgg(fig, self.plot_frame)
-        canvas.draw()
-        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+    # Plot 9 (Monthly Burn Rate Dashboard) removed per user request.
     
     def plot_yoy_comparison(self):
         """Plot 10: Year-over-Year comparison."""
