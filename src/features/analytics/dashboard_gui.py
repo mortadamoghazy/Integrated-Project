@@ -812,84 +812,36 @@ class PayrollDashboard:
         
         self.clear_plot()
         
-        # Ask user for number of clusters
-        dialog = tk.Toplevel(self.root)
-        dialog.title("K-Means Clustering Configuration")
-        dialog.geometry("400x250")
-        dialog.transient(self.root)
-        dialog.grab_set()
-        
-        ttk.Label(dialog, text="K-Means Clustering Settings", 
-                 font=("Arial", 12, "bold")).pack(pady=10)
-        
-        # Number of clusters
-        frame1 = ttk.Frame(dialog)
-        frame1.pack(pady=10)
-        ttk.Label(frame1, text="Number of Clusters (K):", 
-                 font=("Arial", 10)).pack(side=tk.LEFT, padx=5)
-        k_var = tk.IntVar(value=3)
-        k_spinbox = ttk.Spinbox(frame1, from_=2, to=min(8, len(self.df['employee_id'].unique())-1), 
-                               textvariable=k_var, width=10)
-        k_spinbox.pack(side=tk.LEFT)
-        
-        # Visualization type
-        frame2 = ttk.Frame(dialog)
-        frame2.pack(pady=10)
-        ttk.Label(frame2, text="Visualization:", 
-                 font=("Arial", 10)).pack(side=tk.LEFT, padx=5)
-        viz_var = tk.StringVar(value='2d_scatter')
-        viz_options = [
-            ('2D Cluster Map (PCA)', '2d_scatter'),
-            ('Cluster Profiles', 'profiles'),
-            ('Elbow & Silhouette', 'optimization')
-        ]
-        for text, value in viz_options:
-            ttk.Radiobutton(frame2, text=text, variable=viz_var, 
-                          value=value).pack(anchor='w', padx=20)
-        
-        result = {'confirmed': False}
-        
-        def on_ok():
-            result['confirmed'] = True
-            result['k'] = k_var.get()
-            result['viz'] = viz_var.get()
-            dialog.destroy()
-        
-        def on_cancel():
-            dialog.destroy()
-        
-        # Buttons
-        btn_frame = ttk.Frame(dialog)
-        btn_frame.pack(pady=15)
-        ttk.Button(btn_frame, text="Run Clustering", command=on_ok).pack(side=tk.LEFT, padx=5)
-        ttk.Button(btn_frame, text="Cancel", command=on_cancel).pack(side=tk.LEFT, padx=5)
-        
-        dialog.wait_window()
-        
-        if not result['confirmed']:
-            return
-        
-        # Run clustering
+        # Run clustering immediately with K=3 and show simple HR view
         try:
-            clustering = EmployeeClustering(self.df, n_clusters=result['k'])
+            clustering = EmployeeClustering(self.df, n_clusters=3)
             clustering.fit()
             
-            # Generate selected visualization
-            if result['viz'] == '2d_scatter':
-                fig = clustering.plot_clusters_2d()
-            elif result['viz'] == 'profiles':
-                fig = clustering.plot_cluster_profiles()
-            else:  # optimization
-                fig = clustering.plot_elbow_silhouette()
+            # Always use simplified HR view in GUI
+            fig = clustering.plot_hr_simple()
             
-            # Show cluster summary
+            # Show cluster summary with employee assignments
             profiles = clustering.get_cluster_profiles()
-            summary = f"K-Means Clustering Results (K={result['k']})\n"
-            summary += f"Silhouette Score: {clustering.silhouette:.3f}\n\n"
-            for _, row in profiles.iterrows():
-                summary += f"Cluster {int(row['cluster_id'])}: "
-                summary += f"{int(row['size'])} employees, "
-                summary += f"Avg Cost: ${row['avg_total_cost']:,.0f}\n"
+            sorted_profiles = profiles.sort_values('avg_total_cost')
+            tier_names = ['Low-Cost (Entry Level)', 'Mid-Cost (Experienced)', 'High-Cost (Senior)']
+            
+            summary = "Employee Cost Clustering Results\n"
+            summary += "=" * 50 + "\n\n"
+            
+            for idx, (_, row) in enumerate(sorted_profiles.iterrows()):
+                tier_name = tier_names[idx] if idx < len(tier_names) else f"Tier {idx+1}"
+                summary += f"{tier_name}\n"
+                summary += f"  • {int(row['size'])} employees\n"
+                summary += f"  • ${row['avg_total_cost']:,.0f} per employee/month\n"
+                summary += f"  • ${row['avg_total_cost'] * row['size']:,.0f} total/month\n"
+                
+                # Add employee list
+                emp_list = ', '.join(str(emp) for emp in row['employee_ids'])
+                summary += f"  • Employees: {emp_list}\n\n"
+            
+            total_monthly = (profiles['avg_total_cost'] * profiles['size']).sum()
+            summary += f"Total Monthly Payroll: ${total_monthly:,.0f}\n"
+            summary += f"Clustering Quality: {clustering.silhouette:.2f}/1.00"
             
             messagebox.showinfo("Clustering Complete", summary)
             
