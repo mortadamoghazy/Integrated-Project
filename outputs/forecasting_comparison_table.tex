@@ -1,0 +1,25 @@
+
+\begin{table}[htbp]
+\centering
+\caption{Comprehensive Forecasting Model Evaluation: All Models and Methods}
+\label{tab:forecasting_comprehensive}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{} l cccc cccc cccc @{}}
+\toprule
+& \multicolumn{4}{c}{\textbf{Train/Val/Test}} & \multicolumn{4}{c}{\textbf{Recursive Multi-Step}} & \multicolumn{4}{c}{\textbf{Time Series CV}} \\
+\cmidrule(lr){2-5} \cmidrule(lr){6-9} \cmidrule(lr){10-13}
+\textbf{Model} & \textbf{RMSE} & \textbf{MAE} & \textbf{NRMSE} & \textbf{Rank} & \textbf{RMSE} & \textbf{MAE} & \textbf{NRMSE} & \textbf{Rank} & \textbf{RMSE} & \textbf{MAE} & \textbf{NRMSE} & \textbf{Rank} \\
+\midrule
+\textbf{Ridge} & \textbf{140.4} & \textbf{81.4} & \textbf{0.0516} & \textbf{1} & \textbf{189.8} & \textbf{112.6} & \textbf{0.0698} & \textbf{1} & 167.5 & 149.6 & 0.0554 & 2 \\
+Lasso & 160.5 & 93.7 & 0.0590 & 2 & 200.3 & 121.3 & 0.0736 & 3 & 191.0 & 173.2 & 0.0640 & 3 \\
+AR(2) & 173.9 & 112.8 & 0.0639 & 3 & 451.2 & 216.7 & 0.1659 & 6 & 228.1 & 204.1 & 0.0832 & 4 \\
+AR(1) & 193.7 & 112.2 & 0.0712 & 4 & 279.4 & 170.1 & 0.1027 & 5 & \textbf{139.4} & \textbf{129.3} & \textbf{0.0498} & \textbf{1} \\
+Unpooled & 282.9 & 183.4 & 0.1040 & 6 & 195.4 & 115.7 & 0.0718 & 2 & -- & -- & -- & -- \\
+Pooled FE & 245.9 & 178.9 & 0.0904 & 5 & 238.2 & 166.8 & 0.0876 & 4 & -- & -- & -- & -- \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\vspace{0.5cm}
+\noindent \textbf{Note:} Rank indicates relative performance within each evaluation method (1=best). Bold values indicate the best model for each method. Nested CV results available only for Ridge, Lasso, and XGBoost (not shown).

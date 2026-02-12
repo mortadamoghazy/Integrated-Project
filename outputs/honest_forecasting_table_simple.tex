@@ -1,0 +1,20 @@
+\begin{table}[htbp]
+\centering
+\caption{HONEST Forecasting Evaluation: NRMSE Comparison}
+\label{tab:honest_forecasting_simple}
+\begin{tabular}{@{} l ccc @{}}
+\toprule
+\textbf{Model} & \textbf{Train/Val/Test} & \textbf{Recursive Multi-Step} & \textbf{Time Series CV} \\
+\midrule
+Ridge & \textbf{0.0516} & \textbf{0.0698} & \textbf{0.0321} \\
+Lasso & 0.0590 & 0.0736 & 0.0369 \\
+AR(2) & 0.0534 & 0.0718 & 0.0832 \\
+AR(1) & 0.0616 & 0.0750 & 0.0498 \\
+Unpooled & 0.0786 & 0.0786 & -- \\
+Pooled FE & 0.0857 & 0.0857 & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{0.5cm}
+\noindent \textbf{Note:} All models use validation-based hyperparameter selection for fair comparison. Bold values indicate best performance in each method.

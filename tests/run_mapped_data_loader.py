@@ -21,7 +21,11 @@ from src.core.mapped_data_loader import load_all_mapped_months
 
 
 def main():
-    # Default paths (relative to project root)
+    # FIX_ME: Default input/output paths - Update if your files are located elsewhere
+    # default_input: The sorted Excel file containing mapped payroll data
+    # default_output: Where the consolidated CSV file will be saved
+    # These can also be overridden via command line arguments:
+    #   python run_mapped_data_loader.py <input.xlsx> <output.csv>
     default_input = project_root / "data" / "raw" / "data_sorted.xlsx"
     default_output = project_root / "outputs" / "payroll_mapped_long.csv"
     

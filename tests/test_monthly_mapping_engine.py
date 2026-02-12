@@ -37,7 +37,14 @@ from src.core.normalization import _norm_label, _norm_emp_id
 
 
 # ---------------------------------------------------------------------
-# SOURCE EXCEL PATH (explicit, as requested)
+# FIX_ME: SOURCE AND OUTPUT EXCEL PATHS
+# ---------------------------------------------------------------------
+# Update these paths to match your local file system structure
+# SOURCE_EXCEL_PATH: The raw payroll Excel file to be processed
+# OUTPUT_EXCEL_PATH: Where the mapped/sorted data will be saved
+#
+# IMPORTANT: Use raw strings (r"") for Windows paths to avoid escape issues
+# Example: r"C:\Users\YourName\Documents\Project\data\raw\payroll.xlsx"
 # ---------------------------------------------------------------------
 SOURCE_EXCEL_PATH = r"C:\Users\Morta\OneDrive\Desktop\Gam3a\MARS\Integrated Project\data\raw\essai donnees paye.xlsx"
 OUTPUT_EXCEL_PATH = r"C:\Users\Morta\OneDrive\Desktop\Gam3a\MARS\Integrated Project\data\raw\data_sorted.xlsx"

@@ -1,0 +1,19 @@
+\begin{table}[htbp]
+\centering
+\caption{K-Means Clustering Validation Metrics (K=3)}
+\label{tab:clustering_metrics}
+\begin{tabular}{cccccc}
+\toprule
+\textbf{K} & \textbf{Silhouette} & \textbf{Davies-} & \textbf{Calinski-} & \textbf{Inertia} & \textbf{Avg Cluster} \\
+           & \textbf{Score}      & \textbf{Bouldin} & \textbf{Harabasz}  &                  & \textbf{Size}        \\
+\midrule
+    3 & 0.4234 & 0.8462 & 29.67 & 46.91 & 10.0 \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+    \small
+    \item \textbf{Silhouette Score}: Higher is better (range: -1 to 1). Measures cluster cohesion and separation.
+    \item \textbf{Davies-Bouldin Index}: Lower is better. Measures cluster compactness and separation.
+    \item \textbf{Calinski-Harabasz Index}: Higher is better. Ratio of between-cluster to within-cluster variance.
+\end{tablenotes}
+\end{table}

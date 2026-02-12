@@ -37,8 +37,12 @@ except ImportError:
 
 
 # =============================
-# Configuration
+# FIX_ME: Configuration - Update data path and parameters if needed
 # =============================
+# TARGET_LABEL: Column name containing the salary/target variable
+# CSV_PATH: Location of the processed payroll data in long format
+# TEST_MONTHS: Number of months reserved for testing (typically 6)
+# VAL_MONTHS: Number of months reserved for validation (typically 3)
 TARGET_LABEL = "salaire_brut"
 CSV_PATH = "outputs/payroll_long.csv"
 TEST_MONTHS = 6

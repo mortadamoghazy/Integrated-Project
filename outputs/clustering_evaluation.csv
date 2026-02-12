@@ -1,0 +1,2 @@
+K,Silhouette_Score,Davies_Bouldin_Index,Calinski_Harabasz_Index,Inertia,Min_Cluster_Size,Max_Cluster_Size,Avg_Cluster_Size,Avg_Cluster_Cost_Mean,Avg_Cluster_Cost_Std,Silhouette_Rank,Davies_Bouldin_Rank,Calinski_Harabasz_Rank,Composite_Rank,Overall_Rank
+3,0.423390770036857,0.8461554614676651,29.671618940680197,46.905815665204585,4,17,10.0,4011.6658287944806,593.0645409893738,1,1,1,1.0,1

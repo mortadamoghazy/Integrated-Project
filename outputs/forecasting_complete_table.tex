@@ -1,0 +1,23 @@
+\begin{table}[htbp]
+\centering
+\caption{Complete Forecasting Model Evaluation: Train/Test Split and Recursive Multi-Step}
+\label{tab:forecasting_complete}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{} l cccc cccc @{}}
+\toprule
+& \multicolumn{4}{c}{\textbf{Train/Test}} & \multicolumn{4}{c}{\textbf{Recursive Multi-Step}} \\
+\cmidrule(lr){2-5} \cmidrule(lr){6-9}
+\textbf{Model} & \textbf{RMSE} & \textbf{MAE} & \textbf{NRMSE} & \textbf{Rank} & \textbf{RMSE} & \textbf{MAE} & \textbf{NRMSE} & \textbf{Rank} \\
+\midrule
+\textbf{AR(2)+Ridge} & \textbf{128.3} & \textbf{72.8} & \textbf{0.0472} & \textbf{1} & \textbf{190.1} & \textbf{106.0} & \textbf{0.0699} & \textbf{1} \\
+AR(2) & 145.4 & 82.9 & 0.0534 & 2 & 195.4 & 115.7 & 0.0718 & 2 \\
+AR(2)+Lasso & 156.8 & 88.4 & 0.0577 & 3 & 198.9 & 113.5 & 0.0731 & 3 \\
+AR(1) & 167.5 & 90.7 & 0.0616 & 4 & 203.9 & 121.4 & 0.0750 & 4 \\
+Unpooled & 227.4 & 137.6 & 0.0836 & 5 & 227.4 & 137.6 & 0.0836 & 5 \\
+Pooled FE & 233.2 & 162.8 & 0.0857 & 6 & 233.2 & 162.8 & 0.0857 & 6 \\
+Lasso & 233.5 & 165.0 & 0.0859 & 7 & 234.4 & 161.1 & 0.0862 & 7 \\
+Ridge & 234.8 & 166.1 & 0.0863 & 8 & 235.8 & 162.1 & 0.0867 & 8 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}

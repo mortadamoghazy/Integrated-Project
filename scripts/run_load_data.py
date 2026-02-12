@@ -9,7 +9,9 @@ from pathlib import Path
 from src.core.multi_sheet_loader import load_all_months
 
 def main():
-    # Path to the multi-month payroll workbook
+    # FIX_ME: Update this path to point to your multi-month payroll workbook
+    # This should be an Excel file (.xlsx or .xlsm) containing monthly payroll sheets
+    # Default location: data/raw/synthetic_payroll_startup.xlsx
     wb_path = Path("data/raw/synthetic_payroll_startup.xlsx")
 
     print("=== STEP 1: Loading all months from workbook ===")

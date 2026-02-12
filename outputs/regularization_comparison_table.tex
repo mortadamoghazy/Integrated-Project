@@ -1,0 +1,30 @@
+
+\begin{table}[htbp]
+\centering
+\caption{Regularization Effect on Pooled and Unpooled Models}
+\label{tab:regularization_effect}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{} l l cccc cccc @{}}
+\toprule
+& & \multicolumn{4}{c}{\textbf{Train/Val/Test}} & \multicolumn{4}{c}{\textbf{Recursive Multi-Step}} \\
+\cmidrule(lr){3-6} \cmidrule(lr){7-10}
+\textbf{Model} & \textbf{Regularization} & \textbf{RMSE} & \textbf{MAE} & \textbf{NRMSE} & \textbf{R²} & \textbf{RMSE} & \textbf{MAE} & \textbf{NRMSE} & \textbf{R²} \\
+\midrule
+\textbf{Pooled FE} & OLS & 245.9 & 178.9 & 0.0904 & 0.9192 & 233.2 & 162.8 & 0.0857 & 0.9273 \\
+ & Ridge ($\alpha=0.1$) & 251.8 & 183.2 & 0.0926 & 0.9152 & 238.2 & 166.8 & 0.0876 & 0.9241 \\
+ & Ridge ($\alpha=1.0$) & 289.8 & 210.0 & 0.1066 & 0.8877 & 273.5 & 192.3 & 0.1005 & 0.9000 \\
+ & Ridge ($\alpha=10.0$) & 464.0 & 396.8 & 0.1706 & 0.7121 & 432.6 & 364.0 & 0.1591 & 0.7497 \\
+ & Ridge ($\alpha=100.0$) & 773.1 & 678.9 & 0.2842 & 0.2009 & 756.7 & 663.5 & 0.2782 & 0.2346 \\
+\midrule
+\textbf{Unpooled} & OLS & 282.9 & 183.4 & 0.1040 & 0.8930 & 195.4 & 115.7 & 0.0718 & 0.9490 \\
+ & Ridge ($\alpha=0.1$) & 282.8 & 183.3 & 0.1040 & 0.8931 & 195.4 & 115.7 & 0.0718 & 0.9490 \\
+ & Ridge ($\alpha=1.0$) & 282.2 & 182.9 & 0.1038 & 0.8935 & 194.9 & 115.4 & 0.0716 & 0.9492 \\
+ & Ridge ($\alpha=10.0$) & 276.7 & 179.4 & 0.1017 & 0.8976 & 191.6 & 114.2 & 0.0704 & 0.9509 \\
+ & Ridge ($\alpha=100.0$) & 246.9 & 157.1 & 0.0908 & 0.9185 & 184.0 & 108.4 & 0.0676 & 0.9548 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\vspace{0.3cm}
+\noindent \textbf{Note:} OLS = Ordinary Least Squares (unregularized). Ridge regularization with different $\alpha$ values shows the trade-off between bias and variance.

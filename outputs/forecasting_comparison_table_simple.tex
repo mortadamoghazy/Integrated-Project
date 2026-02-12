@@ -1,0 +1,26 @@
+
+\begin{table}[htbp]
+\centering
+\caption{Forecasting Model Performance: NRMSE Comparison Across Evaluation Methods}
+\label{tab:forecasting_nrmse}
+\begin{tabular}{@{} l ccc @{}}
+\toprule
+\textbf{Model} & \textbf{Train/Val/Test} & \textbf{Recursive Multi-Step} & \textbf{Time Series CV} \\
+\midrule
+\textbf{Ridge} & \textbf{0.0516} & \textbf{0.0698} & 0.0554 \\
+Lasso & 0.0590 & 0.0736 & 0.0640 \\
+AR(2) & 0.0639 & 0.1659 & 0.0832 \\
+AR(1) & 0.0712 & 0.1027 & \textbf{0.0498} \\
+Pooled FE & 0.0904 & 0.0876 & -- \\
+Unpooled & 0.1040 & 0.0718 & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{0.3cm}
+\noindent \textbf{Evaluation Methods:}
+\begin{itemize}
+    \item \textbf{Train/Val/Test}: Traditional split with 6-month test period (one-step-ahead forecasts)
+    \item \textbf{Recursive Multi-Step}: Realistic forecasting where predictions feed back as inputs (error accumulation)
+    \item \textbf{Time Series CV}: Cross-validation with expanding window (3 splits, 6-month test size)
+\end{itemize}

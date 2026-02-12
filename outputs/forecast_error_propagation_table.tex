@@ -1,0 +1,26 @@
+\begin{table}[htbp]
+\centering
+\caption{Recursive Forecast Error Propagation (AR(2) with Ridge Regularization)}
+\label{tab:forecast_error_propagation}
+\begin{tabular}{ccccc}
+\toprule
+\textbf{Forecast} & \textbf{Time} & \textbf{Error Margin} & \textbf{CI Width} & \textbf{Growth} \\
+\textbf{Step} & \textbf{Horizon} & \textbf{(�)} & \textbf{(�)} & \textbf{(\%)} \\
+\midrule
+    1 & 1 month(s) & ±251.53 & 503.07 & – \\
+    2 & 2 month(s) & ±355.72 & 711.44 & +41.4\% \\
+    3 & 3 month(s) & ±435.71 & 871.41 & +73.2\% \\
+    4 & 4 month(s) & ±503.07 & 1,006.14 & +100.0\% \\
+    5 & 5 month(s) & ±562.35 & 1,124.70 & +123.6\% \\
+    6 & 6 month(s) & ±615.83 & 1,231.67 & +144.9\% \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+    \small
+    \item \textbf{Error Margin}: Confidence interval margin calculated as $\pm\text{RMSE} \times \sqrt{t} \times 1.96$ where $t$ is the forecast step.
+    \item \textbf{CI Width}: Total width of 95\% confidence interval (2 � Error Margin).
+    \item \textbf{Growth}: Percentage increase in error margin compared to step 1 (baseline).
+    \item Train/Test RMSE: €128.32 (AR(2) with Ridge Regularization, $\alpha=10.0$).
+    \item Formula assumes independent forecast errors; actual recursive error may differ.
+\end{tablenotes}
+\end{table}

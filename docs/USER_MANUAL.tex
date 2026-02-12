@@ -1,0 +1,1616 @@
+\documentclass[11pt,a4paper]{article}
+
+% ============================================
+% PACKAGES
+% ============================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{tcolorbox}
+\usepackage{fontawesome5}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{amsmath}
+\usepackage{array}
+
+% ============================================
+% PAGE LAYOUT
+% ============================================
+\geometry{
+    left=2.5cm,
+    right=2.5cm,
+    top=3cm,
+    bottom=3cm,
+    headheight=15pt
+}
+
+% ============================================
+% COLORS
+% ============================================
+\definecolor{primaryblue}{RGB}{0,102,204}
+\definecolor{warningred}{RGB}{220,50,50}
+\definecolor{successgreen}{RGB}{40,167,69}
+\definecolor{infobox}{RGB}{240,248,255}
+\definecolor{warningbox}{RGB}{255,243,205}
+\definecolor{codebg}{RGB}{248,249,250}
+\definecolor{codeframe}{RGB}{222,226,230}
+
+% ============================================
+% HYPERLINKS
+% ============================================
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    filecolor=primaryblue,
+    urlcolor=primaryblue,
+    citecolor=primaryblue,
+    pdftitle={Payroll Analytics System - User Manual},
+    pdfauthor={MARS Project},
+    pdfsubject={Installation and User Guide},
+    pdfkeywords={Payroll, Analytics, Forecasting, Dashboard}
+}
+
+% ============================================
+% HEADERS AND FOOTERS
+% ============================================
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textit{Payroll Analytics System}}
+\fancyhead[R]{\small\textit{User Manual}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+% ============================================
+% SECTION FORMATTING
+% ============================================
+\titleformat{\section}
+{\color{primaryblue}\Large\bfseries}
+{\thesection}{1em}{}
+
+\titleformat{\subsection}
+{\color{primaryblue}\large\bfseries}
+{\thesubsection}{1em}{}
+
+\titleformat{\subsubsection}
+{\color{primaryblue}\normalsize\bfseries}
+{\thesubsubsection}{1em}{}
+
+% ============================================
+% CUSTOM BOXES
+% ============================================
+\tcbuselibrary{skins,breakable}
+
+\newtcolorbox{infobox}[1][]{
+    colback=infobox,
+    colframe=primaryblue,
+    fonttitle=\bfseries,
+    title=\faInfoCircle\ Information,
+    breakable,
+    enhanced,
+    attach boxed title to top left={yshift=-2mm, xshift=5mm},
+    boxed title style={colback=primaryblue, colframe=primaryblue},
+    #1
+}
+
+\newtcolorbox{warningbox}[1][]{
+    colback=warningbox,
+    colframe=warningred,
+    fonttitle=\bfseries,
+    title=\faExclamationTriangle\ Warning,
+    breakable,
+    enhanced,
+    attach boxed title to top left={yshift=-2mm, xshift=5mm},
+    boxed title style={colback=warningred, colframe=warningred},
+    #1
+}
+
+\newtcolorbox{successbox}[1][]{
+    colback=green!5,
+    colframe=successgreen,
+    fonttitle=\bfseries,
+    title=\faCheckCircle\ Success,
+    breakable,
+    enhanced,
+    attach boxed title to top left={yshift=-2mm, xshift=5mm},
+    boxed title style={colback=successgreen, colframe=successgreen},
+    #1
+}
+
+\newtcolorbox{commandbox}[1][]{
+    colback=codebg,
+    colframe=codeframe,
+    fonttitle=\bfseries\ttfamily,
+    title=\faTerminal\ Command,
+    breakable,
+    enhanced,
+    #1
+}
+
+% ============================================
+% CODE LISTINGS
+% ============================================
+\lstdefinestyle{pythonstyle}{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{codebg},
+    frame=single,
+    rulecolor=\color{codeframe},
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{gray}\itshape,
+    stringstyle=\color{red},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    numbersep=10pt,
+    tabsize=4,
+    showspaces=false,
+    showstringspaces=false,
+    breaklines=true,
+    breakatwhitespace=true,
+    captionpos=b
+}
+
+\lstdefinestyle{vbastyle}{
+    language=VBScript,
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{codebg},
+    frame=single,
+    rulecolor=\color{codeframe},
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green}\itshape,
+    stringstyle=\color{red},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    numbersep=10pt,
+    tabsize=4,
+    showspaces=false,
+    showstringspaces=false,
+    breaklines=true,
+    breakatwhitespace=true,
+    captionpos=b
+}
+
+\lstdefinestyle{shellstyle}{
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{codebg},
+    frame=single,
+    rulecolor=\color{codeframe},
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{gray}\itshape,
+    numbers=none,
+    showspaces=false,
+    showstringspaces=false,
+    breaklines=true,
+    breakatwhitespace=true
+}
+
+% ============================================
+% DOCUMENT
+% ============================================
+\begin{document}
+
+% ============================================
+% TITLE PAGE
+% ============================================
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    
+    {\Huge\bfseries\color{primaryblue} Payroll Analytics System\par}
+    \vspace{0.5cm}
+    {\LARGE User Manual\par}
+    \vspace{2cm}
+    
+    {\Large\itshape Installation, Configuration \& Usage Guide\par}
+    \vspace{3cm}
+    
+    \begin{tcolorbox}[colback=infobox, colframe=primaryblue, width=0.8\textwidth]
+        \centering
+        \large
+        \textbf{Complete Setup Instructions}\\[0.5cm]
+        From installation to advanced forecasting\\[0.2cm]
+        Includes troubleshooting and best practices
+    \end{tcolorbox}
+    
+    \vfill
+    
+    {\large MARS Project\\
+    Integrated Payroll Management System\\[0.3cm]
+    \today\par}
+\end{titlepage}
+
+% ============================================
+% TABLE OF CONTENTS
+% ============================================
+\tableofcontents
+\newpage
+
+% ============================================
+% CHAPTER 1: INTRODUCTION
+% ============================================
+\section{Introduction}
+
+\subsection{About This Manual}
+
+This user manual provides comprehensive instructions for installing, configuring, and using the Payroll Analytics System. Whether you are a first-time user or an experienced analyst, this guide will help you:
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Install} all required software dependencies
+    \item \textbf{Configure} the system for your environment
+    \item \textbf{Process} payroll data from Excel files
+    \item \textbf{Generate} forecasts using advanced machine learning models
+    \item \textbf{Visualize} insights through interactive dashboards
+\end{itemize}
+
+\subsection{System Overview}
+
+The Payroll Analytics System is a Python-based application designed to:
+
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Import \& Map:} Load payroll data from various Excel formats and standardize column names
+    \item \textbf{Process \& Transform:} Clean, normalize, and prepare data for analysis
+    \item \textbf{Analyze \& Forecast:} Apply 8 predictive models including AR(2)+Ridge regularization
+    \item \textbf{Visualize \& Report:} Create 10+ interactive visualizations and export results
+\end{enumerate}
+
+\begin{infobox}[title=\faLightbulb\ Key Features]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{AR(2)+Ridge Forecasting:} Best-in-class model with 4.72\% NRMSE
+    \item \textbf{Employee Clustering:} Automatic grouping based on salary patterns
+    \item \textbf{Interactive Dashboard:} 10 visualization options with filtering
+    \item \textbf{Excel Integration:} VBA control panel for seamless workflow
+    \item \textbf{Recursive Forecasting:} 6-month predictions with confidence intervals
+\end{itemize}
+\end{infobox}
+
+\subsection{Prerequisites}
+
+Before installation, ensure you have:
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Operating System:} Windows 10/11 (64-bit)
+    \item \textbf{Microsoft Excel:} 2016 or later with macro support
+    \item \textbf{Administrator Rights:} For installing Python and dependencies
+    \item \textbf{Disk Space:} At least 2 GB free space
+    \item \textbf{Internet Connection:} For downloading packages
+\end{itemize}
+
+\newpage
+
+% ============================================
+% CHAPTER 2: INSTALLATION
+% ============================================
+\section{Installation}
+
+\subsection{Step 1: Download the Project}
+
+\subsubsection{Option A: Clone from Repository (Recommended)}
+
+If you have Git installed:
+
+\begin{commandbox}[title=Git Clone Command]
+\begin{lstlisting}[style=shellstyle]
+cd C:\Users\YourName\Documents
+git clone <repository-url> "Integrated Project"
+cd "Integrated Project"
+\end{lstlisting}
+\end{commandbox}
+
+\subsubsection{Option B: Download ZIP Archive}
+
+\begin{enumerate}[leftmargin=*]
+    \item Download the project ZIP file from the repository
+    \item Extract to: \texttt{C:\textbackslash Users\textbackslash YourName\textbackslash Documents\textbackslash Integrated Project}
+    \item Ensure the folder structure matches:
+\end{enumerate}
+
+\begin{lstlisting}[style=shellstyle, frame=single]
+Integrated Project/
+├── data/
+│   └── raw/
+├── docs/
+├── outputs/
+├── scripts/
+├── src/
+│   ├── core/
+│   ├── excel_tools/
+│   └── features/
+├── tests/
+└── Control_Panel_New.xlsm
+\end{lstlisting}
+
+\begin{warningbox}[title=Important: Folder Location]
+\textbf{Do not use paths with special characters or spaces in parent folders.}\\[0.3cm]
+\faCheck\ Good: \texttt{C:\textbackslash Users\textbackslash John\textbackslash Documents\textbackslash Integrated Project}\\
+\faTimes\ Bad: \texttt{C:\textbackslash Users\textbackslash John Smith\textbackslash My Files\textbackslash Project}
+\end{warningbox}
+
+\subsection{Step 2: Install Python 3.10}
+
+\subsubsection{Download Python}
+
+\begin{enumerate}[leftmargin=*]
+    \item Visit: \url{https://www.python.org/downloads/}
+    \item Download \textbf{Python 3.10.x} (64-bit recommended)
+    \item Run the installer
+\end{enumerate}
+
+\subsubsection{Installation Options}
+
+\begin{warningbox}[title=Critical: Installation Settings]
+During installation, you \textbf{MUST}:
+\begin{itemize}
+    \item \faCheckSquare\ Check \textbf{"Add Python 3.10 to PATH"}
+    \item \faCheckSquare\ Select \textbf{"Install for all users"} (if available)
+    \item \faCheckSquare\ Choose \textbf{"Customize installation"}
+    \item \faCheckSquare\ Enable \textbf{"pip"} and \textbf{"tcl/tk and IDLE"}
+\end{itemize}
+\end{warningbox}
+
+\subsubsection{Verify Installation}
+
+Open PowerShell or Command Prompt and run:
+
+\begin{commandbox}[title=Verification Commands]
+\begin{lstlisting}[style=shellstyle]
+python --version
+# Expected output: Python 3.10.x
+
+python -c "import sys; print(sys.executable)"
+# Expected output: C:\Users\YourName\AppData\Local\Programs\Python\Python310\python.exe
+\end{lstlisting}
+\end{commandbox}
+
+\begin{successbox}[title=Success Indicator]
+If both commands execute without errors, Python is correctly installed!
+\end{successbox}
+
+\newpage
+
+\subsection{Step 3: Install Required Python Packages}
+
+\subsubsection{Navigate to Project Directory}
+
+\begin{commandbox}[title=Change Directory]
+\begin{lstlisting}[style=shellstyle]
+cd "C:\Users\YourName\Documents\Integrated Project"
+\end{lstlisting}
+\end{commandbox}
+
+\subsubsection{Install Core Dependencies}
+
+Run the following command to install all required packages:
+
+\begin{commandbox}[title=Package Installation]
+\begin{lstlisting}[style=shellstyle]
+python -m pip install --upgrade pip
+pip install pandas numpy matplotlib scikit-learn openpyxl xlwings
+\end{lstlisting}
+\end{commandbox}
+
+\subsubsection{Package Descriptions}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{} l p{8cm} @{}}
+\toprule
+\textbf{Package} & \textbf{Purpose} \\
+\midrule
+\texttt{pandas} & Data manipulation and analysis \\
+\texttt{numpy} & Numerical computations and arrays \\
+\texttt{matplotlib} & Data visualization and plotting \\
+\texttt{scikit-learn} & Machine learning models (Ridge, Lasso) \\
+\texttt{openpyxl} & Reading/writing Excel files (.xlsx) \\
+\texttt{xlwings} & Excel-Python integration (VBA bridge) \\
+\bottomrule
+\end{tabular}
+\caption{Required Python packages and their functions}
+\end{table}
+
+\begin{infobox}[title=Installation Time]
+Package installation typically takes 2-5 minutes depending on your internet connection.
+\end{infobox}
+
+\subsubsection{Verify Package Installation}
+
+\begin{commandbox}[title=Verification Script]
+\begin{lstlisting}[style=shellstyle]
+python -c "import pandas, numpy, matplotlib, sklearn, openpyxl, xlwings; print('All packages installed successfully!')"
+\end{lstlisting}
+\end{commandbox}
+
+If you see the success message, proceed to configuration.
+
+\begin{warningbox}[title=Troubleshooting: Import Errors]
+If you encounter \texttt{ModuleNotFoundError}:
+\begin{enumerate}
+    \item Ensure you're using the correct Python executable
+    \item Try reinstalling the specific package: \texttt{pip install --force-reinstall <package-name>}
+    \item Check for typos in package names
+\end{enumerate}
+\end{warningbox}
+
+\newpage
+
+% ============================================
+% CHAPTER 3: CONFIGURATION
+% ============================================
+\section{Configuration}
+
+This section guides you through configuring all \texttt{FIX\_ME} paths in the codebase to match your local environment.
+
+\begin{warningbox}[title=Critical Step]
+\textbf{All configurations in this section are MANDATORY.}\\
+The application will not work without updating these paths.
+\end{warningbox}
+
+\subsection{Configuration Overview}
+
+You need to update \textbf{11 configuration points} across 8 files:
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{} l c l @{}}
+\toprule
+\textbf{File} & \textbf{Count} & \textbf{Type} \\
+\midrule
+Control\_Panel\_VBA\_Module.bas & 2 & VBA Constants \\
+src/core/config.py & 2 & Python Paths \\
+test\_monthly\_mapping\_engine.py & 2 & Absolute Paths \\
+dashboard\_gui.py & 1 & Data Path \\
+run\_load\_data.py & 1 & Data Path \\
+run\_mapped\_data\_loader.py & 1 & Data Path \\
+train\_test\_only\_evaluation.py & 1 & Data Path \\
+simplified\_forecasting\_comparison.py & 1 & Data Path \\
+\bottomrule
+\end{tabular}
+\caption{Configuration files requiring updates}
+\end{table}
+
+\subsection{VBA Configuration (Control Panel)}
+
+\subsubsection{Find Your Python Path}
+
+First, determine your Python executable location:
+
+\begin{commandbox}[title=Get Python Path]
+\begin{lstlisting}[style=shellstyle]
+python -c "import sys; print(sys.executable)"
+\end{lstlisting}
+\end{commandbox}
+
+\textbf{Example output:}
+\begin{lstlisting}[style=shellstyle, frame=none]
+C:\Users\Morta\AppData\Local\Programs\Python\Python310\python.exe
+\end{lstlisting}
+
+Copy this entire path for the next step.
+
+\subsubsection{Edit VBA Module}
+
+\begin{enumerate}[leftmargin=*]
+    \item Open \texttt{Control\_Panel\_New.xlsm} in Excel
+    \item Press \texttt{Alt+F11} to open the VBA Editor
+    \item In the Project Explorer, locate \texttt{PayrollControlPanel} module
+    \item Find lines 40-41 (marked with \texttt{FIX\_ME} comment)
+\end{enumerate}
+
+\begin{lstlisting}[style=vbastyle, caption=VBA Configuration Lines 40-41]
+' FIX_ME: Update these paths to match your environment
+Const PYTHON_PATH As String = "C:\Users\YourName\...\python.exe"
+Const PROJECT_PATH As String = "C:\Users\YourName\...\Integrated Project\"
+\end{lstlisting}
+
+\subsubsection{Update the Paths}
+
+Replace with your actual paths:
+
+\begin{lstlisting}[style=vbastyle, caption=Example Configuration]
+Const PYTHON_PATH As String = "C:\Users\Morta\AppData\Local\Programs\Python\Python310\python.exe"
+Const PROJECT_PATH As String = "C:\Users\Morta\Documents\Integrated Project\"
+\end{lstlisting}
+
+\begin{warningbox}[title=Path Format Rules]
+\begin{itemize}
+    \item Use backslashes (\textbackslash) not forward slashes (/)
+    \item \texttt{PROJECT\_PATH} \textbf{must} end with a backslash (\textbackslash)
+    \item Use full absolute paths (not relative paths like \texttt{../ or ./})
+    \item Enclose paths in double quotes
+\end{itemize}
+\end{warningbox}
+
+\subsubsection{Test Configuration}
+
+\begin{enumerate}[leftmargin=*]
+    \item In the VBA Editor, press \texttt{F5} to run \texttt{VerifyConfiguration} macro
+    \item A message box will appear showing:
+    \begin{itemize}
+        \item \faCheck\ Python found/not found
+        \item \faCheck\ Project folder found/not found
+    \end{itemize}
+    \item If both checks pass, save and close the VBA Editor
+\end{enumerate}
+
+\begin{successbox}[title=Configuration Successful]
+\textbf{Checkmarks on both items?} Your VBA configuration is correct!
+\end{successbox}
+
+\newpage
+
+\subsection{Python Configuration}
+
+\subsubsection{Core Configuration: config.py}
+
+Open \texttt{src/core/config.py} in a text editor.
+
+\textbf{Configuration Point 1: Payroll File Name (Line 18)}
+
+\begin{lstlisting}[style=pythonstyle, caption=Update Payroll File Name]
+# FIX_ME: Update the filename to match your actual payroll Excel file
+# This should be the main payroll workbook in the data/raw/ directory
+PAYROLL_FILE = os.path.join(DATA_RAW_DIR, "Pay emploier sept25.xlsm")
+\end{lstlisting}
+
+\textbf{Change to:} Your actual Excel filename in \texttt{data/raw/} folder.
+
+\textbf{Example:}
+\begin{lstlisting}[style=pythonstyle]
+PAYROLL_FILE = os.path.join(DATA_RAW_DIR, "Control_Panel.xlsm")
+# or
+PAYROLL_FILE = os.path.join(DATA_RAW_DIR, "company_payroll_2025.xlsx")
+\end{lstlisting}
+
+\textbf{Configuration Point 2: Sheet Names (Lines 22-24)}
+
+\begin{lstlisting}[style=pythonstyle, caption=Update Sheet Names]
+# FIX_ME: Update sheet names to match your Excel workbook structure
+SRC_SHEET = "Feuil1"       # source sheet with full payroll data
+TGT_SHEET = "Sheet1"       # simplified / target sheet
+CUSTOM_SHEET = "CustomMap" # sheet for saved mappings (auto-created)
+\end{lstlisting}
+
+\begin{infobox}[title=How to Find Sheet Names]
+\begin{enumerate}
+    \item Open your Excel file
+    \item Look at the sheet tabs at the bottom
+    \item Copy the exact names (case-sensitive)
+\end{enumerate}
+\end{infobox}
+
+\textbf{Example:} If your sheets are named "Payroll\_Data" and "Summary":
+\begin{lstlisting}[style=pythonstyle]
+SRC_SHEET = "Payroll_Data"
+TGT_SHEET = "Summary"
+CUSTOM_SHEET = "CustomMap"  # Keep this as-is (will be created automatically)
+\end{lstlisting}
+
+\subsubsection{Mapping Engine: test\_monthly\_mapping\_engine.py}
+
+Open \texttt{tests/test\_monthly\_mapping\_engine.py} in a text editor.
+
+\textbf{Configuration Point: File Paths (Lines 50-51)}
+
+\begin{lstlisting}[style=pythonstyle, caption=Update Absolute Paths]
+# FIX_ME: SOURCE AND OUTPUT EXCEL PATHS
+SOURCE_EXCEL_PATH = r"C:\Users\Morta\OneDrive\Desktop\Gam3a\MARS\Integrated Project\data\raw\essai donnees paye.xlsx"
+OUTPUT_EXCEL_PATH = r"C:\Users\Morta\OneDrive\Desktop\Gam3a\MARS\Integrated Project\data\raw\data_sorted.xlsx"
+\end{lstlisting}
+
+\begin{warningbox}[title=Critical: Absolute Paths Required]
+These \textbf{MUST} be full absolute paths matching your project location.\\[0.3cm]
+\textbf{Use raw strings} (prefix with \texttt{r}) to avoid escape character issues.
+\end{warningbox}
+
+\textbf{How to build your paths:}
+\begin{enumerate}
+    \item Find your project root folder (e.g., \texttt{C:\textbackslash Users\textbackslash John\textbackslash Documents\textbackslash Integrated Project})
+    \item Append \texttt{\textbackslash data\textbackslash raw\textbackslash your\_file.xlsx}
+    \item Prefix with \texttt{r} to create a raw string
+\end{enumerate}
+
+\textbf{Example for user "John" with project in Documents:}
+\begin{lstlisting}[style=pythonstyle]
+SOURCE_EXCEL_PATH = r"C:\Users\John\Documents\Integrated Project\data\raw\payroll.xlsx"
+OUTPUT_EXCEL_PATH = r"C:\Users\John\Documents\Integrated Project\data\raw\data_sorted.xlsx"
+\end{lstlisting}
+
+\newpage
+
+\subsubsection{Dashboard: dashboard\_gui.py}
+
+Open \texttt{src/features/analytics/dashboard\_gui.py} in a text editor.
+
+\textbf{Configuration Point: Data Path (Line 40)}
+
+\begin{lstlisting}[style=pythonstyle, caption=Dashboard Data Path]
+# FIX_ME: Data file path - Update if your payroll_long.csv is located elsewhere
+self.data_path = project_root / "outputs" / "payroll_long.csv"
+\end{lstlisting}
+
+\begin{infobox}[title=Default Path]
+This uses a \textbf{relative path} that works automatically if your project structure is correct.\\[0.2cm]
+\textbf{Only change this if you moved the outputs folder to a different location.}
+\end{infobox}
+
+\subsubsection{Data Loading: run\_load\_data.py}
+
+Open \texttt{scripts/run\_load\_data.py} in a text editor.
+
+\textbf{Configuration Point: Workbook Path (Line 14)}
+
+\begin{lstlisting}[style=pythonstyle, caption=Multi-Month Workbook Path]
+# FIX_ME: Update this path to point to your multi-month payroll workbook
+wb_path = Path("data/raw/synthetic_payroll_startup.xlsx")
+\end{lstlisting}
+
+\textbf{Change to:} Your actual multi-month workbook filename.
+
+\textbf{Example:}
+\begin{lstlisting}[style=pythonstyle]
+wb_path = Path("data/raw/payroll_2025.xlsx")
+\end{lstlisting}
+
+\subsubsection{Evaluation Scripts Configuration}
+
+The following scripts use the same configuration pattern:
+
+\begin{itemize}
+    \item \texttt{tests/train\_test\_only\_evaluation.py} (Lines 36-38)
+    \item \texttt{tests/simplified\_forecasting\_comparison.py} (Lines 47-50)
+    \item \texttt{tests/honest\_forecasting\_evaluation.py} (Lines 37-39)
+    \item \texttt{tests/run\_mapped\_data\_loader.py} (Lines 29-30)
+\end{itemize}
+
+\textbf{Configuration Pattern:}
+
+\begin{lstlisting}[style=pythonstyle, caption=Standard Evaluation Configuration]
+# FIX_ME: Configuration - Update data path if needed
+TARGET_LABEL = "salaire_brut"  # Column containing salary data
+CSV_PATH = "outputs/payroll_long.csv"  # Processed data location
+TEST_MONTHS = 6  # Number of months for testing
+\end{lstlisting}
+
+\begin{infobox}[title=When to Change These]
+These configurations use \textbf{relative paths} and work automatically.\\[0.2cm]
+\textbf{Only update if you:}
+\begin{itemize}
+    \item Renamed the \texttt{outputs} folder
+    \item Changed the target column name
+    \item Want a different test period length
+\end{itemize}
+\end{infobox}
+
+\subsection{Configuration Checklist}
+
+Before proceeding, verify you've updated:
+
+\begin{itemize}[label=\faSquare]
+    \item[\faCheckSquare] VBA: \texttt{PYTHON\_PATH} constant
+    \item[\faCheckSquare] VBA: \texttt{PROJECT\_PATH} constant
+    \item[\faCheckSquare] Python: \texttt{PAYROLL\_FILE} in config.py
+    \item[\faCheckSquare] Python: Sheet names in config.py
+    \item[\faCheckSquare] Python: Absolute paths in test\_monthly\_mapping\_engine.py
+    \item[\faSquare] Optional: Dashboard data path (only if moved)
+    \item[\faSquare] Optional: Evaluation script paths (only if renamed)
+\end{itemize}
+
+\begin{successbox}[title=Configuration Complete]
+If you've checked all mandatory items (\faCheckSquare), your system is configured correctly!
+\end{successbox}
+
+\newpage
+
+% ============================================
+% CHAPTER 4: USING THE SYSTEM
+% ============================================
+\section{Using the Payroll Analytics System}
+
+\subsection{System Workflow Overview}
+
+The typical workflow consists of 4 main steps:
+
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Import \& Map:} Load raw payroll Excel files and define column mappings
+    \item \textbf{Process Data:} Convert to standardized CSV format
+    \item \textbf{Analyze:} Run forecasting models and generate predictions
+    \item \textbf{Visualize:} Explore insights through the interactive dashboard
+\end{enumerate}
+
+\begin{figure}[h]
+\centering
+\begin{tcolorbox}[width=0.9\textwidth, colback=white, colframe=primaryblue]
+\centering
+\textbf{System Workflow}\\[0.5cm]
+Raw Excel Files $\xrightarrow{\text{Import \& Map}}$ Standardized Data $\xrightarrow{\text{Process}}$ Clean CSV\\[0.3cm]
+Clean CSV $\xrightarrow{\text{Analyze}}$ Predictions $\xrightarrow{\text{Visualize}}$ Dashboard
+\end{tcolorbox}
+\caption{Data processing pipeline}
+\end{figure}
+
+\subsection{Opening the Control Panel}
+
+\begin{enumerate}[leftmargin=*]
+    \item Navigate to your project folder
+    \item Open \texttt{Control\_Panel\_New.xlsm}
+    \item If prompted, click \textbf{"Enable Macros"} or \textbf{"Enable Content"}
+\end{enumerate}
+
+\begin{warningbox}[title=Macro Security Settings]
+If macros are blocked:
+\begin{enumerate}
+    \item File $\rightarrow$ Options $\rightarrow$ Trust Center $\rightarrow$ Trust Center Settings
+    \item Macro Settings $\rightarrow$ Select \textbf{"Enable all macros"}
+    \item Restart Excel
+\end{enumerate}
+\end{warningbox}
+
+The Control Panel provides 4 main buttons:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{} l p{9cm} @{}}
+\toprule
+\textbf{Button} & \textbf{Function} \\
+\midrule
+Import \& Map Data & Launch the mapping GUI to process Excel files \\
+Open Output Folder & View generated CSV files and results \\
+Open Mapped Workbook & Review the standardized Excel output \\
+Visualize Data & Launch the analytics dashboard \\
+\bottomrule
+\end{tabular}
+\caption{Control Panel buttons}
+\end{table}
+
+\newpage
+
+\subsection{Step 1: Import and Map Data}
+
+\subsubsection{Prepare Your Data}
+
+Before importing, ensure your payroll Excel file:
+
+\begin{itemize}[leftmargin=*]
+    \item Is located in \texttt{data/raw/} folder
+    \item Contains monthly payroll sheets (e.g., "January", "February", etc.)
+    \item Has consistent column headers across all sheets
+    \item Includes employee identifiers and salary information
+\end{itemize}
+
+\subsubsection{Launch the Mapping GUI}
+
+\begin{enumerate}[leftmargin=*]
+    \item In the Control Panel, click \textbf{"Import \& Map Data"}
+    \item A Python window will open showing the Import Dialog
+    \item The GUI will display all Excel files in your \texttt{data/raw/} folder
+\end{enumerate}
+
+\begin{infobox}[title=First-Time Setup]
+The first time you run this, it may take 5-10 seconds for Python to initialize.
+\end{infobox}
+
+\subsubsection{Select Source File}
+
+\begin{enumerate}[leftmargin=*]
+    \item In the file list, select your payroll Excel file
+    \item Click \textbf{"Import Selected File"}
+    \item The system will analyze the file structure
+\end{enumerate}
+
+\subsubsection{Define Column Mappings}
+
+The mapping window shows:
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Left column:} Target field names (standardized)
+    \item \textbf{Right column:} Dropdown menus with your Excel columns
+\end{itemize}
+
+\textbf{Required mappings:}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{} l p{7cm} @{}}
+\toprule
+\textbf{Target Field} & \textbf{Description} \\
+\midrule
+employee\_id & Unique identifier for each employee \\
+salaire\_brut & Gross salary (before deductions) \\
+cot\_salarie & Employee social contributions \\
+cot\_patronale & Employer social contributions \\
+net\_imposable & Taxable net salary \\
+PAS & Income tax withheld (Pay-As-You-Earn) \\
+net\_paye & Net salary paid to employee \\
+avantages & Benefits and allowances \\
+total\_cost & Total cost to employer \\
+\bottomrule
+\end{tabular}
+\caption{Standard target fields}
+\end{table}
+
+\textbf{Mapping instructions:}
+
+\begin{enumerate}[leftmargin=*]
+    \item For each target field, select the corresponding column from your Excel file
+    \item If a field doesn't exist in your data, select \textbf{"(none)"}
+    \item For calculated fields (e.g., \texttt{total\_cost}), you can use formulas
+\end{enumerate}
+
+\begin{infobox}[title=Formula Support]
+You can create calculated fields using operators:\\[0.2cm]
+\texttt{total\_cost = salaire\_brut + cot\_patronale + avantages}\\[0.2cm]
+Click the \textbf{"Formula Builder"} button for assistance.
+\end{infobox}
+
+\subsubsection{Save and Apply Mappings}
+
+\begin{enumerate}[leftmargin=*]
+    \item After defining all mappings, click \textbf{"Save Mappings"}
+    \item The system will:
+    \begin{itemize}
+        \item Save mappings to a \texttt{CustomMap} sheet (for reuse)
+        \item Process all monthly sheets
+        \item Create \texttt{data\_sorted.xlsx} with standardized data
+        \item Generate \texttt{payroll\_long.csv} for analysis
+    \end{itemize}
+    \item A success message will appear when processing is complete
+\end{enumerate}
+
+\begin{successbox}[title=Processing Complete]
+\textbf{Files created:}
+\begin{itemize}
+    \item \texttt{data/raw/data\_sorted.xlsx} - Standardized Excel workbook
+    \item \texttt{outputs/payroll\_long.csv} - Analysis-ready CSV file
+\end{itemize}
+\end{successbox}
+
+\subsubsection{Verify Output}
+
+\begin{enumerate}[leftmargin=*]
+    \item Click \textbf{"Open Output Folder"} in the Control Panel
+    \item Check that \texttt{payroll\_long.csv} exists
+    \item Open the file to verify:
+    \begin{itemize}
+        \item All months are included
+        \item Column names are standardized
+        \item Data values are correct
+    \end{itemize}
+\end{enumerate}
+
+\newpage
+
+\subsection{Step 2: Review Mapped Data (Optional)}
+
+\subsubsection{Open the Mapped Workbook}
+
+\begin{enumerate}[leftmargin=*]
+    \item In the Control Panel, click \textbf{"Open Mapped Workbook"}
+    \item Excel will open \texttt{data\_sorted.xlsx}
+    \item Review the standardized format
+\end{enumerate}
+
+\subsubsection{What to Check}
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Structure:} Each month is a separate sheet
+    \item \textbf{Headers:} Row 1 contains standardized column names
+    \item \textbf{Data:} Rows 2+ contain employee records
+    \item \textbf{Mappings:} CustomMap sheet shows your saved mappings
+\end{itemize}
+
+\begin{infobox}[title=Editing Mappings]
+To modify mappings:
+\begin{enumerate}
+    \item Delete rows from the CustomMap sheet
+    \item Re-run "Import \& Map Data"
+    \item The GUI will use existing mappings for unchanged fields
+\end{enumerate}
+\end{infobox}
+
+\subsection{Step 3: Visualize and Analyze}
+
+\subsubsection{Launch the Dashboard}
+
+\begin{enumerate}[leftmargin=*]
+    \item In the Control Panel, click \textbf{"Visualize Data"}
+    \item The Payroll Analytics Dashboard will open
+    \item Wait 2-3 seconds for data to load
+\end{enumerate}
+
+\subsubsection{Dashboard Interface}
+
+The dashboard has 3 main sections:
+
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Top Panel:} Filters for employee and month selection
+    \item \textbf{Left Panel:} 10 visualization options
+    \item \textbf{Right Panel:} Interactive charts and graphs
+\end{enumerate}
+
+\subsubsection{Available Visualizations}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{} l p{8cm} @{}}
+\toprule
+\textbf{Visualization} & \textbf{Description} \\
+\midrule
+Total Cost Trend & Monthly total payroll cost over time \\
+Forecasting & 6-month predictions using AR(2)+Ridge model \\
+Cost per Employee & Individual employee cost breakdown \\
+Employee Clustering & Automatic grouping based on salary patterns \\
+Distribution Analysis & Salary distribution histograms \\
+Cost Components & Breakdown of gross, net, and contributions \\
+Monthly Comparison & Side-by-side month comparison \\
+Correlation Matrix & Relationships between payroll variables \\
+Top Earners & Highest-paid employees ranking \\
+Cost Variance & Month-to-month cost changes \\
+\bottomrule
+\end{tabular}
+\caption{Dashboard visualizations}
+\end{table}
+
+\newpage
+
+\subsubsection{Using Filters}
+
+\textbf{Employee Filter:}
+\begin{itemize}[leftmargin=*]
+    \item Select \textbf{"All"} to view aggregate data
+    \item Select a specific employee to view individual data
+\end{itemize}
+
+\textbf{Month Filter:}
+\begin{itemize}[leftmargin=*]
+    \item Select \textbf{"All"} to include all available months
+    \item Select a specific month to focus on that period
+\end{itemize}
+
+\begin{infobox}[title=Filter Interactions]
+Filters apply to \textbf{all visualizations}. Change filters once and all charts update automatically.
+\end{infobox}
+
+\subsubsection{Forecasting Feature}
+
+The \textbf{Forecasting} visualization is the most advanced feature:
+
+\begin{itemize}[leftmargin=*]
+    \item Uses \textbf{AR(2)+Ridge} model (best performer: 4.72\% NRMSE)
+    \item Predicts 6 months into the future
+    \item Shows \textbf{95\% confidence intervals} with error amplification
+    \item Includes historical data for context
+\end{itemize}
+
+\textbf{How to interpret:}
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Blue line:} Historical payroll costs
+    \item \textbf{Red dashed line:} Forecasted costs
+    \item \textbf{Shaded area:} 95\% confidence interval (uncertainty range)
+\end{enumerate}
+
+\textbf{Confidence interval formula:}
+\begin{equation}
+\text{CI}_t = \pm \text{RMSE} \times \sqrt{t} \times 1.96
+\end{equation}
+
+Where $t$ is the forecast step (1-6 months).
+
+\begin{warningbox}[title=Forecast Limitations]
+\textbf{Forecasts assume:}
+\begin{itemize}
+    \item No major structural changes (hiring/layoffs)
+    \item Consistent payroll policies
+    \item Historical patterns continue
+\end{itemize}
+Use forecasts as \textbf{guidance}, not absolute predictions.
+\end{warningbox}
+
+\subsubsection{Employee Clustering}
+
+The \textbf{Clustering} visualization automatically groups employees:
+
+\begin{itemize}[leftmargin=*]
+    \item Groups based on salary patterns and trends
+    \item Uses K-Means algorithm with optimal cluster count
+    \item Shows cluster centroids (average profiles)
+\end{itemize}
+
+\textbf{Use cases:}
+\begin{itemize}[leftmargin=*]
+    \item Identify salary tiers (junior/mid/senior)
+    \item Detect outliers or anomalies
+    \item Plan compensation strategies
+\end{itemize}
+
+\newpage
+
+\subsection{Step 4: Advanced Analysis (Optional)}
+
+\subsubsection{Running Model Evaluations}
+
+To compare all 8 forecasting models:
+
+\begin{commandbox}[title=Run Model Evaluation]
+\begin{lstlisting}[style=shellstyle]
+cd "C:\Users\YourName\Documents\Integrated Project"
+python tests/train_test_only_evaluation.py
+\end{lstlisting}
+\end{commandbox}
+
+This will:
+\begin{enumerate}[leftmargin=*]
+    \item Evaluate all models (AR(1), AR(2), AR(2)+Ridge, AR(2)+Lasso, Ridge-Panel, Lasso-Panel, Pooled FE, Unpooled)
+    \item Use Train/Test split and Recursive multi-step methods
+    \item Save results to \texttt{outputs/train\_test\_only\_evaluation.csv}
+    \item Display RMSE, NRMSE, MAE, and $R^2$ metrics
+\end{enumerate}
+
+\begin{infobox}[title=Evaluation Time]
+Model evaluation takes approximately 5-10 minutes for 30 employees × 24 months.
+\end{infobox}
+
+\subsubsection{Model Performance Summary}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{} l c c c @{}}
+\toprule
+\textbf{Model} & \textbf{Train/Test NRMSE} & \textbf{Recursive NRMSE} & \textbf{Rank} \\
+\midrule
+AR(2)+Ridge & 0.0472 & 0.0699 & \textbf{1} \\
+AR(2) & 0.0534 & 0.0718 & 2 \\
+AR(2)+Lasso & 0.0577 & 0.0731 & 3 \\
+AR(1) & 0.0616 & 0.0750 & 4 \\
+Unpooled & 0.0836 & 0.0836 & 5 \\
+Pooled FE & 0.0857 & 0.0857 & 6 \\
+Lasso-Panel & 0.0859 & 0.0862 & 7 \\
+Ridge-Panel & 0.0863 & 0.0867 & 8 \\
+\bottomrule
+\end{tabular}
+\caption{Model comparison (lower NRMSE is better)}
+\end{table}
+
+\subsubsection{Generating LaTeX Tables}
+
+To create publication-ready tables for reports:
+
+\begin{commandbox}[title=Generate LaTeX Tables]
+\begin{lstlisting}[style=shellstyle]
+python tests/generate_forecast_error_table.py
+\end{lstlisting}
+\end{commandbox}
+
+Output files (in \texttt{outputs/}):
+\begin{itemize}[leftmargin=*]
+    \item \texttt{forecasting\_complete\_table.tex} - Full model comparison
+    \item \texttt{forecast\_error\_propagation\_table.tex} - Error amplification
+\end{itemize}
+
+These can be directly included in \LaTeX documents.
+
+\newpage
+
+% ============================================
+% CHAPTER 5: TROUBLESHOOTING
+% ============================================
+\section{Troubleshooting}
+
+\subsection{Python Issues}
+
+\subsubsection{Problem: "Python is not recognized"}
+
+\textbf{Symptoms:}
+\begin{lstlisting}[style=shellstyle]
+'python' is not recognized as an internal or external command
+\end{lstlisting}
+
+\textbf{Solutions:}
+\begin{enumerate}[leftmargin=*]
+    \item Verify Python is installed: Open \texttt{Add/Remove Programs} and search "Python"
+    \item Add Python to PATH:
+    \begin{enumerate}
+        \item Search for "Environment Variables" in Windows
+        \item Edit "Path" variable
+        \item Add: \texttt{C:\textbackslash Users\textbackslash YourName\textbackslash AppData\textbackslash Local\textbackslash Programs\textbackslash Python\textbackslash Python310}
+        \item Add: \texttt{C:\textbackslash Users\textbackslash YourName\textbackslash AppData\textbackslash Local\textbackslash Programs\textbackslash Python\textbackslash Python310\textbackslash Scripts}
+        \item Restart Command Prompt/PowerShell
+    \end{enumerate}
+    \item Use full path: Instead of \texttt{python}, use the full executable path
+\end{enumerate}
+
+\subsubsection{Problem: "No module named 'pandas'"}
+
+\textbf{Symptoms:}
+\begin{lstlisting}[style=shellstyle]
+ModuleNotFoundError: No module named 'pandas'
+\end{lstlisting}
+
+\textbf{Solutions:}
+\begin{enumerate}[leftmargin=*]
+    \item Verify you're using the correct Python:
+    \begin{lstlisting}[style=shellstyle]
+python -c "import sys; print(sys.executable)"
+    \end{lstlisting}
+    \item Reinstall the package:
+    \begin{lstlisting}[style=shellstyle]
+pip install --force-reinstall pandas
+    \end{lstlisting}
+    \item Check if pip is installing to the correct location:
+    \begin{lstlisting}[style=shellstyle]
+pip --version
+    \end{lstlisting}
+\end{enumerate}
+
+\subsection{Excel/VBA Issues}
+
+\subsubsection{Problem: "Macros are disabled"}
+
+\textbf{Symptoms:}
+\begin{itemize}[leftmargin=*]
+    \item Buttons don't work
+    \item Yellow warning banner at top of Excel
+\end{itemize}
+
+\textbf{Solutions:}
+\begin{enumerate}[leftmargin=*]
+    \item Click \textbf{"Enable Content"} in the warning banner
+    \item OR: File $\rightarrow$ Options $\rightarrow$ Trust Center $\rightarrow$ Trust Center Settings $\rightarrow$ Macro Settings $\rightarrow$ Enable all macros
+\end{enumerate}
+
+\subsubsection{Problem: "Run-time error '53': File not found"}
+
+\textbf{Symptoms:}
+\begin{itemize}[leftmargin=*]
+    \item VBA error when clicking buttons
+    \item Error points to \texttt{PYTHON\_PATH} or \texttt{PROJECT\_PATH}
+\end{itemize}
+
+\textbf{Solutions:}
+\begin{enumerate}[leftmargin=*]
+    \item Verify paths in VBA are correct (see Section 3.2)
+    \item Run \texttt{VerifyConfiguration} macro
+    \item Check for typos in path strings
+    \item Ensure backslashes, not forward slashes
+\end{enumerate}
+
+\subsection{Data Processing Issues}
+
+\subsubsection{Problem: "No data available"}
+
+\textbf{Symptoms:}
+\begin{itemize}[leftmargin=*]
+    \item Dashboard opens but shows empty charts
+    \item Error: "No data available for visualization"
+\end{itemize}
+
+\textbf{Solutions:}
+\begin{enumerate}[leftmargin=*]
+    \item Verify \texttt{outputs/payroll\_long.csv} exists
+    \item Check CSV file is not empty (should have multiple rows)
+    \item Re-run "Import \& Map Data" from Control Panel
+    \item Verify mappings were saved correctly
+\end{enumerate}
+
+\subsubsection{Problem: "Insufficient data for forecasting"}
+
+\textbf{Symptoms:}
+\begin{itemize}[leftmargin=*]
+    \item Error: "Need at least 5 months of data"
+\end{itemize}
+
+\textbf{Solutions:}
+\begin{enumerate}[leftmargin=*]
+    \item Ensure your Excel file contains at least 5 monthly sheets
+    \item Check that all months have data (not empty sheets)
+    \item Verify employee IDs are consistent across months
+\end{enumerate}
+
+\subsection{Performance Issues}
+
+\subsubsection{Problem: "Application is slow"}
+
+\textbf{Symptoms:}
+\begin{itemize}[leftmargin=*]
+    \item Dashboard takes long to open
+    \item Visualizations lag when changing filters
+\end{itemize}
+
+\textbf{Solutions:}
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Reduce data size:} Filter to specific date ranges
+    \item \textbf{Close other applications:} Free up RAM
+    \item \textbf{Use SSD:} Move project to solid-state drive
+    \item \textbf{Upgrade Python packages:} \texttt{pip install --upgrade pandas numpy}
+\end{enumerate}
+
+\subsection{Getting Help}
+
+If you encounter issues not covered here:
+
+\begin{enumerate}[leftmargin=*]
+    \item Check the \texttt{README.md} file in the project root
+    \item Review error messages carefully - they often indicate the problem
+    \item Check Python/VBA syntax for typos in configuration files
+    \item Consult the project documentation in \texttt{docs/} folder
+\end{enumerate}
+
+\newpage
+
+% ============================================
+% CHAPTER 6: BEST PRACTICES
+% ============================================
+\section{Best Practices}
+
+\subsection{Data Management}
+
+\subsubsection{Organize Your Files}
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Keep raw data separate:} Place original Excel files in \texttt{data/raw/}
+    \item \textbf{Version your data:} Use date suffixes (e.g., \texttt{payroll\_2025\_01.xlsx})
+    \item \textbf{Backup regularly:} Copy \texttt{outputs/} folder to external storage
+    \item \textbf{Document changes:} Maintain a log of data processing steps
+\end{itemize}
+
+\subsubsection{Data Quality Checks}
+
+Before importing:
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Verify completeness:} All required columns present
+    \item \textbf{Check formats:} Numbers stored as numbers, not text
+    \item \textbf{Remove duplicates:} No duplicate employee records per month
+    \item \textbf{Validate ranges:} Salaries within expected bounds
+\end{enumerate}
+
+\subsection{Forecasting Guidelines}
+
+\subsubsection{When to Use Forecasts}
+
+Forecasts are most reliable when:
+\begin{itemize}[leftmargin=*]
+    \item You have \textbf{at least 12 months} of historical data
+    \item Payroll patterns are \textbf{relatively stable}
+    \item No recent major organizational changes
+    \item Employee turnover is low to moderate
+\end{itemize}
+
+\subsubsection{Interpreting Confidence Intervals}
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Narrow intervals:} High confidence, stable predictions
+    \item \textbf{Wide intervals:} High uncertainty, use caution
+    \item \textbf{Growing intervals:} Normal - uncertainty increases over time
+    \item \textbf{95\% meaning:} 95\% of actual values will fall within the shaded area
+\end{itemize}
+
+\subsubsection{Model Selection}
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Default choice:} AR(2)+Ridge (best overall performance)
+    \item \textbf{For stability:} Use recursive forecasting method
+    \item \textbf{For accuracy:} Retrain models every 3-6 months
+    \item \textbf{For interpretation:} Review NRMSE (normalized metric)
+\end{itemize}
+
+\subsection{Visualization Tips}
+
+\subsubsection{Effective Filtering}
+
+\begin{itemize}[leftmargin=*]
+    \item Start with \textbf{"All"} filters to see overall trends
+    \item Focus on \textbf{specific employees} for detailed analysis
+    \item Use \textbf{monthly filters} to investigate anomalies
+    \item Compare \textbf{before/after} periods when changes occur
+\end{itemize}
+
+\subsubsection{Exporting Results}
+
+To save visualizations:
+\begin{enumerate}[leftmargin=*]
+    \item Generate the desired chart in the dashboard
+    \item Right-click on the chart
+    \item Select "Save Image As..."
+    \item Choose PNG format for presentations, SVG for publications
+\end{enumerate}
+
+\subsection{Maintenance}
+
+\subsubsection{Regular Updates}
+
+\textbf{Monthly tasks:}
+\begin{itemize}[leftmargin=*]
+    \item Import new payroll data
+    \item Review forecast accuracy
+    \item Update visualizations
+\end{itemize}
+
+\textbf{Quarterly tasks:}
+\begin{itemize}[leftmargin=*]
+    \item Re-run model evaluation
+    \item Archive old data
+    \item Backup project folder
+\end{itemize}
+
+\textbf{Annual tasks:}
+\begin{itemize}[leftmargin=*]
+    \item Update Python packages: \texttt{pip install --upgrade -r requirements.txt}
+    \item Review and clean up \texttt{outputs/} folder
+    \item Document any custom modifications
+\end{itemize}
+
+\subsubsection{Version Control}
+
+If using Git:
+\begin{lstlisting}[style=shellstyle]
+# Save your configurations
+git add src/core/config.py
+git add Control_Panel_VBA_Module.bas
+git commit -m "Updated configuration for environment"
+
+# Don't commit sensitive data
+# Add to .gitignore:
+data/raw/*.xlsx
+outputs/*.csv
+\end{lstlisting}
+
+\newpage
+
+% ============================================
+% APPENDIX
+% ============================================
+\section{Appendix}
+
+\subsection{Appendix A: File Structure Reference}
+
+\begin{lstlisting}[style=shellstyle, caption=Complete Project Structure]
+Integrated Project/
+├── Control_Panel_New.xlsm          # Main Excel control panel
+├── Control_Panel_VBA_Module.bas    # VBA code for buttons
+├── data/
+│   ├── raw/                        # Raw Excel payroll files
+│   │   ├── Pay emploier sept25.xlsm
+│   │   ├── data_sorted.xlsx        # Standardized output
+│   │   └── essai donnees paye.xlsx
+│   └── processed/                  # (Optional) Intermediate files
+├── docs/                           # Documentation
+│   ├── USER_MANUAL.tex             # This manual (LaTeX source)
+│   ├── CLUSTERING_GUIDE.md
+│   └── latex/                      # Report LaTeX files
+├── outputs/                        # Generated results
+│   ├── payroll_long.csv            # Main analysis dataset
+│   ├── train_test_only_evaluation.csv  # Model results
+│   ├── forecasting_complete_table.tex
+│   └── forecast_error_propagation_table.tex
+├── scripts/                        # Utility scripts
+│   ├── run_dashboard.py            # Launch dashboard
+│   ├── run_load_data.py            # Load multi-month data
+│   └── run_analysis.py
+├── src/                            # Source code
+│   ├── core/                       # Core utilities
+│   │   ├── config.py               # Configuration (FIX_ME)
+│   │   ├── data_loader.py
+│   │   └── normalization.py
+│   ├── excel_tools/                # Excel integration
+│   │   ├── import_dialog.py       # Import GUI
+│   │   ├── mapping_utils.py
+│   │   └── mapping_gui.py
+│   └── features/                   # Features
+│       └── analytics/
+│           ├── dashboard_gui.py    # Main dashboard (FIX_ME)
+│           └── employee_clustering.py
+└── tests/                          # Analysis scripts
+    ├── train_test_only_evaluation.py       # Model evaluation (FIX_ME)
+    ├── test_monthly_mapping_engine.py     # Mapping engine (FIX_ME)
+    ├── run_mapped_data_loader.py          # Data loader (FIX_ME)
+    ├── simplified_forecasting_comparison.py
+    └── honest_forecasting_evaluation.py
+\end{lstlisting}
+
+\subsection{Appendix B: Configuration Quick Reference}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{} p{5cm} p{8cm} @{}}
+\toprule
+\textbf{File} & \textbf{What to Change} \\
+\midrule
+Control\_Panel\_VBA\_Module.bas & Lines 40-41: \texttt{PYTHON\_PATH}, \texttt{PROJECT\_PATH} \\
+src/core/config.py & Line 18: \texttt{PAYROLL\_FILE}, Lines 22-24: Sheet names \\
+test\_monthly\_mapping\_engine.py & Lines 50-51: Absolute file paths \\
+dashboard\_gui.py & Line 40: Data path (optional) \\
+run\_load\_data.py & Line 14: Workbook path (optional) \\
+\bottomrule
+\end{tabular}
+\caption{FIX\_ME configuration summary}
+\end{table}
+
+\newpage
+
+\subsection{Appendix C: Model Technical Details}
+
+\subsubsection{AR(2)+Ridge Model}
+
+\textbf{Formula:}
+\begin{equation}
+y_t = \beta_0 + \beta_1 t + \beta_2 \text{month}_t + \beta_3 y_{t-1} + \beta_4 y_{t-2} + \beta_5 y_{t-3} + \epsilon_t
+\end{equation}
+
+With L2 regularization:
+\begin{equation}
+\min_{\beta} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2 + \alpha \sum_{j=1}^{p} \beta_j^2
+\end{equation}
+
+\textbf{Parameters:}
+\begin{itemize}[leftmargin=*]
+    \item $\alpha = 10.0$ (optimal via cross-validation)
+    \item Features: time index, month number, 3 lagged values
+    \item Training: Per-employee models with standardized features
+\end{itemize}
+
+\textbf{Performance:}
+\begin{itemize}[leftmargin=*]
+    \item RMSE: €128.32 (Train/Test), €190.09 (Recursive)
+    \item NRMSE: 0.0472 (Train/Test), 0.0699 (Recursive)
+    \item $R^2$: 0.9780 (Train/Test), 0.9517 (Recursive)
+\end{itemize}
+
+\subsubsection{Error Propagation}
+
+Recursive forecasting accumulates errors over time:
+
+\begin{equation}
+\text{CI}_t = \pm \text{RMSE} \times \sqrt{t} \times 1.96
+\end{equation}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{} c c c c @{}}
+\toprule
+\textbf{Step} & \textbf{Horizon} & \textbf{Error Margin} & \textbf{Growth} \\
+\midrule
+1 & 1 month & ±€251.53 & -- \\
+2 & 2 months & ±€355.72 & +41.4\% \\
+3 & 3 months & ±€435.71 & +73.2\% \\
+4 & 4 months & ±€503.07 & +100.0\% \\
+5 & 5 months & ±€562.35 & +123.6\% \\
+6 & 6 months & ±€615.83 & +144.9\% \\
+\bottomrule
+\end{tabular}
+\caption{Forecast error propagation (AR(2)+Ridge, RMSE=€128.32)}
+\end{table}
+
+\subsection{Appendix D: Python Package Versions}
+
+Recommended versions (tested and verified):
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{} l c @{}}
+\toprule
+\textbf{Package} & \textbf{Version} \\
+\midrule
+Python & 3.10.x \\
+pandas & $\geq$ 1.5.0 \\
+numpy & $\geq$ 1.23.0 \\
+matplotlib & $\geq$ 3.6.0 \\
+scikit-learn & $\geq$ 1.2.0 \\
+openpyxl & $\geq$ 3.0.0 \\
+xlwings & $\geq$ 0.28.0 \\
+\bottomrule
+\end{tabular}
+\caption{Minimum package versions}
+\end{table}
+
+To check your installed versions:
+\begin{lstlisting}[style=shellstyle]
+pip list | findstr "pandas numpy matplotlib scikit-learn openpyxl xlwings"
+\end{lstlisting}
+
+\newpage
+
+\subsection{Appendix E: Keyboard Shortcuts}
+
+\subsubsection{Excel Shortcuts}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{} l l @{}}
+\toprule
+\textbf{Shortcut} & \textbf{Action} \\
+\midrule
+Alt+F11 & Open VBA Editor \\
+F5 & Run macro / VBA code \\
+Ctrl+G & Open Immediate Window (VBA) \\
+Alt+Q & Close VBA Editor \\
+Ctrl+S & Save workbook \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Dashboard Shortcuts}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{} l l @{}}
+\toprule
+\textbf{Action} & \textbf{Method} \\
+\midrule
+Change visualization & Click button in left panel \\
+Update filters & Use dropdown menus at top \\
+Close dashboard & Close window or press Alt+F4 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Appendix F: Glossary}
+
+\begin{description}[leftmargin=3cm, style=nextline]
+    \item[AR(2)] AutoRegressive model of order 2 - uses 2 previous values to predict next value
+    \item[Ridge Regression] Linear regression with L2 regularization penalty to prevent overfitting
+    \item[NRMSE] Normalized Root Mean Squared Error - scale-independent accuracy metric
+    \item[RMSE] Root Mean Squared Error - average prediction error in original units (€)
+    \item[Recursive Forecasting] Multi-step prediction where each forecast feeds into the next
+    \item[Confidence Interval] Range expected to contain true value with specified probability (95\%)
+    \item[Clustering] Grouping similar employees based on salary patterns
+    \item[VBA] Visual Basic for Applications - Excel's macro programming language
+    \item[Payroll Long Format] Data structure with one row per employee-month observation
+\end{description}
+
+\newpage
+
+% ============================================
+% END MATTER
+% ============================================
+
+\section*{Document Information}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{} l l @{}}
+\toprule
+\textbf{Field} & \textbf{Value} \\
+\midrule
+Title & Payroll Analytics System - User Manual \\
+Version & 1.0 \\
+Date & \today \\
+Project & MARS Integrated Payroll Management \\
+Target Audience & System administrators, data analysts, HR managers \\
+Document Type & Installation and usage guide \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{1cm}
+
+\begin{tcolorbox}[colback=infobox, colframe=primaryblue]
+\textbf{Need Help?}\\[0.3cm]
+If you encounter issues not covered in this manual:
+\begin{itemize}
+    \item Review the troubleshooting section (Chapter 5)
+    \item Check configuration files for \texttt{FIX\_ME} tags
+    \item Verify all paths are correct
+    \item Consult project documentation in \texttt{docs/} folder
+\end{itemize}
+\end{tcolorbox}
+
+\vfill
+
+\begin{center}
+\textit{This manual covers the complete setup and usage of the Payroll Analytics System.\\
+For technical details about forecasting methodology, see the thesis documentation.}
+\end{center}
+
+\end{document}

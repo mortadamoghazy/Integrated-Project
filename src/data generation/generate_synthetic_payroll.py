@@ -188,7 +188,7 @@ def format_sheet(ws):
 # MAIN GENERATOR
 # ============================================================
 
-def generate_payroll_excel(filename="synthetic_payroll.xlsx", model="SME"):
+def generate_payroll_excel(filename="synthetic_payroll_test.xlsx", model="SME"):
     role_model = get_role_model(model)
     num_employees = get_num_employees(model)
 
@@ -257,5 +257,5 @@ def generate_payroll_excel(filename="synthetic_payroll.xlsx", model="SME"):
 # ============================================================
 
 if __name__ == "__main__":
-    generate_payroll_excel("synthetic_payroll_sme.xlsx", model="SME")
-    generate_payroll_excel("synthetic_payroll_startup.xlsx", model="STARTUP")
+    generate_payroll_excel("synthetic_payroll_sme_test.xlsx", model="SME")
+    generate_payroll_excel("synthetic_payroll_startup_test.xlsx", model="STARTUP")

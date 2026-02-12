@@ -1,0 +1,27 @@
+\begin{table}[htbp]
+\centering
+\caption{Forecasting Performance Comparison: 30-Employee vs 250-Employee Datasets}
+\label{tab:dataset_comparison}
+\begin{tabular}{llccc}
+\toprule
+\textbf{Dataset} & \textbf{Model} & \textbf{RMSE} & \textbf{MAE} & \textbf{NRMSE} \\
+\midrule
+Startup (30) & AR(1) & 4370.88 & 4300.15 & 2.3935 \\
+& AR(2) & 2226.79 & 2110.65 & 1.2194 \\
+& AR(3) & 2939.89 & 2682.34 & 1.6099 \\
+& AR(4) & 3969.62 & 3487.79 & 2.1737 \\
+& Ridge & 402.56 & 301.86 & 0.0886 \\
+& Lasso & 372.10 & 277.53 & 0.0819 \\
+& Pooled FE & 359.34 & 269.62 & 0.0791 \\
+\midrule
+SME (250) & AR(1) & 17645.32 & 14693.23 & 0.0358 \\
+& AR(2) & 8289.76 & 7076.84 & 0.0168 \\
+& AR(3) & 10728.39 & 9070.26 & 0.0218 \\
+& AR(4) & 32628.15 & 27267.76 & 0.0662 \\
+& Ridge & 8150.15 & 4832.73 & 0.0960 \\
+& Lasso & 7895.74 & 4700.83 & 0.0930 \\
+& Pooled FE & 7820.18 & 4606.69 & 0.0921 \\
+\midrule
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,0 +1,4 @@
+cluster,Size,Avg_Cost,Std_Cost,Min_Cost,Max_Cost,Avg_Salary,Avg_Contributions,Avg_Benefits,Tier_Name
+1,17,2717.44,515.08,1946.16,3503.97,1985.52,657.96,73.96,Low-Cost (Entry Level)
+0,9,4493.51,458.44,3948.79,5355.86,3305.77,1103.47,84.27,Mid-Cost (Experienced)
+2,4,4824.05,805.67,4030.41,5774.04,3540.73,1215.23,68.09,High-Cost (Senior)

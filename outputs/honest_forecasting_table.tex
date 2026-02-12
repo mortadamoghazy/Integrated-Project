@@ -1,0 +1,24 @@
+\begin{table}[htbp]
+\centering
+\caption{HONEST Forecasting Model Evaluation: Validation-Based Hyperparameter Selection}
+\label{tab:honest_forecasting_comprehensive}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{} l cccc cccc cccc @{}}
+\toprule
+& \multicolumn{4}{c}{\textbf{Train/Val/Test}} & \multicolumn{4}{c}{\textbf{Recursive Multi-Step}} & \multicolumn{4}{c}{\textbf{Time Series CV}} \\
+\cmidrule(lr){2-5} \cmidrule(lr){6-9} \cmidrule(lr){10-13}
+\textbf{Model} & \textbf{RMSE} & \textbf{MAE} & \textbf{NRMSE} & \textbf{Rank} & \textbf{RMSE} & \textbf{MAE} & \textbf{NRMSE} & \textbf{Rank} & \textbf{RMSE} & \textbf{MAE} & \textbf{NRMSE} & \textbf{Rank} \\
+\midrule
+Ridge & \textbf{140.4} & \textbf{81.4} & \textbf{0.0516} & \textbf{1} & \textbf{189.8} & \textbf{112.6} & \textbf{0.0698} & \textbf{1} & \textbf{83.9} & \textbf{72.9} & \textbf{0.0321} & \textbf{1} \\
+Lasso & 160.5 & 93.7 & 0.0590 & 3 & 200.3 & 121.3 & 0.0736 & 3 & 96.1 & 85.4 & 0.0369 & 2 \\
+AR(2) & 145.4 & 82.9 & 0.0534 & 2 & 195.4 & 115.7 & 0.0718 & 2 & 228.1 & 204.1 & 0.0832 & 4 \\
+AR(1) & 167.5 & 90.7 & 0.0616 & 4 & 203.9 & 121.4 & 0.0750 & 4 & 139.4 & 129.3 & 0.0498 & 3 \\
+Unpooled & 213.9 & 128.8 & 0.0786 & 5 & 213.9 & 128.8 & 0.0786 & 5 & -- & -- & -- & -- \\
+Pooled FE & 233.2 & 162.8 & 0.0857 & 6 & 233.2 & 162.8 & 0.0857 & 6 & -- & -- & -- & -- \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\vspace{0.5cm}
+\noindent \textbf{Note:} All models use validation-based hyperparameter selection. Ridge/Lasso: $\alpha \in \{0.1, 1.0, 10.0, 100.0\}$. Pooled FE/Unpooled: $\alpha \in \{0, 0.1, 1.0, 10.0, 100.0\}$. AR models have no hyperparameters. Rank indicates relative performance within each evaluation method (1=best). Bold values indicate best model for each metric.

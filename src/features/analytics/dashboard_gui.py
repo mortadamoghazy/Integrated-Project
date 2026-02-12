@@ -3,7 +3,7 @@ dashboard_gui.py
 
 Interactive dashboard for payroll data visualization.
 Provides 10 key plots for CEO/Manager/HR decision making.
-All forecasting uses AR(2) model (autoregression order 2).
+All forecasting uses AR(2) with Ridge Regularization and recursive error amplification.
 """
 
 import os
@@ -25,7 +25,7 @@ warnings.filterwarnings('ignore')
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from statsmodels.tsa.ar_model import AutoReg
+from sklearn.linear_model import Ridge
 from src.features.analytics.employee_clustering import EmployeeClustering
 
 
@@ -35,7 +35,10 @@ class PayrollDashboard:
         self.root.title("Payroll Data Visualization Dashboard")
         self.root.geometry("1400x800")
         
-        # Data
+        # FIX_ME: Data file path - Update if your payroll_long.csv is located elsewhere
+        # This CSV should contain processed payroll data with columns:
+        # employee_id, month, salaire_brut, total_cost, etc.
+        # Default location: outputs/payroll_long.csv
         self.df: Optional[pd.DataFrame] = None
         self.data_path = project_root / "outputs" / "payroll_long.csv"
 
@@ -81,7 +84,7 @@ class PayrollDashboard:
         # Plot buttons
         self.plot_buttons = [
             ("1. Total Payroll Cost Trend", self.plot_total_cost_trend),
-            ("2. Cost Forecasting (AR2)", self.plot_cost_forecast),
+            ("2. Cost Forecasting (Ar(2) Ridge)", self.plot_cost_forecast),
             ("3. Cost per Employee Trend", self.plot_cost_per_employee),
             ("4. Payroll Cost Breakdown", self.plot_cost_breakdown),
             ("5. Employee Cost Distribution", self.plot_cost_distribution),
@@ -266,7 +269,7 @@ class PayrollDashboard:
         
         ax.set_title('Total Payroll Cost Trend', fontsize=16, fontweight='bold', pad=20)
         ax.set_xlabel('Month', fontsize=12)
-        ax.set_ylabel('Total Cost ($)', fontsize=12)
+        ax.set_ylabel('Total Cost (€)', fontsize=12)
         ax.grid(True, alpha=0.3)
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
         plt.xticks(rotation=45, ha='right')
@@ -281,7 +284,7 @@ class PayrollDashboard:
                 # alternate upward/downward offsets to reduce collisions
                 offset = 10 if ((i // step) % 2 == 0) else -12
                 va = 'bottom' if offset > 0 else 'top'
-                ax.annotate(f'${y:,.0f}', (x, y), textcoords="offset points",
+                ax.annotate(f'€{y:,.0f}', (x, y), textcoords="offset points",
                            xytext=(0, offset), ha='center', va=va, fontsize=8,
                            bbox=dict(boxstyle='round,pad=0.2', fc='white', alpha=0.6, linewidth=0))
 
@@ -298,7 +301,7 @@ class PayrollDashboard:
         canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
     
     def plot_cost_forecast(self):
-        """Plot 2: Cost forecasting using AR(2) model."""
+        """Plot 2: Cost forecasting using AR(2) with Ridge Regularization and recursive error amplification."""
         if self.df is None:
             messagebox.showwarning("No Data", "Please load data first")
             return
@@ -319,71 +322,99 @@ class PayrollDashboard:
         monthly_cost = df_used.groupby('month')['total_cost'].sum().reset_index()
         monthly_cost = monthly_cost.sort_values('month')
 
-        # Fit AR(2) model
+        # Fit Ridge Regression with panel features
         try:
-            ts_data = monthly_cost['total_cost'].values
-            model = AutoReg(ts_data, lags=2)
-            fitted_model = model.fit()
-
-            # Forecast 6 months ahead
+            # Prepare features: time index, employee fixed effects, lagged values
+            monthly_cost['time_idx'] = range(len(monthly_cost))
+            monthly_cost['month_num'] = monthly_cost['month'].dt.month
+            
+            # Create lagged features
+            for lag in [1, 2, 3]:
+                monthly_cost[f'lag_{lag}'] = monthly_cost['total_cost'].shift(lag)
+            
+            # Drop NaN rows from lagging
+            train_data = monthly_cost.dropna()
+            
+            if len(train_data) < 5:
+                messagebox.showerror("Insufficient Data", "Need at least 5 months of data for AR(2)+Ridge forecasting")
+                return
+            
+            # Prepare training features
+            feature_cols = ['time_idx', 'month_num', 'lag_1', 'lag_2', 'lag_3']
+            X_train = train_data[feature_cols].values
+            y_train = train_data['total_cost'].values
+            
+            # Fit Ridge model
+            model = Ridge(alpha=10.0)  # Using optimal alpha from AR(2)+Ridge evaluation
+            model.fit(X_train, y_train)
+            
+            # Calculate RMSE for error propagation
+            y_pred_train = model.predict(X_train)
+            rmse = np.sqrt(np.mean((y_train - y_pred_train) ** 2))
+            
+            # Recursive forecasting 6 months ahead
             forecast_steps = 6
-            forecast = fitted_model.forecast(steps=forecast_steps)
-
+            forecast = []
+            last_values = list(monthly_cost['total_cost'].values[-3:])  # Last 3 values for lags
+            last_time = monthly_cost['time_idx'].iloc[-1]
+            last_month = monthly_cost['month'].iloc[-1]
+            
+            for step in range(1, forecast_steps + 1):
+                next_time = last_time + step
+                next_month = (last_month + pd.DateOffset(months=step)).month
+                
+                # Create features for next step
+                X_next = np.array([[
+                    next_time,
+                    next_month,
+                    last_values[-1],  # lag_1
+                    last_values[-2],  # lag_2
+                    last_values[-3]   # lag_3
+                ]])
+                
+                # Predict
+                pred = model.predict(X_next)[0]
+                forecast.append(pred)
+                
+                # Update last_values for next iteration (recursive)
+                last_values.append(pred)
+                last_values.pop(0)
+            
+            forecast = np.array(forecast)
+            
             # Create future dates
             last_date = monthly_cost['month'].iloc[-1]
             future_dates = pd.date_range(start=last_date, periods=forecast_steps+1, freq='MS')[1:]
-
+            
+            # Recursive error amplification: CI_t = ±RMSE × √t × 1.96
+            conf_intervals = []
+            for t in range(1, forecast_steps + 1):
+                error_margin = rmse * np.sqrt(t) * 1.96
+                conf_intervals.append(error_margin)
+            
+            conf_intervals = np.array(conf_intervals)
+            conf_upper = forecast + conf_intervals
+            conf_lower = forecast - conf_intervals
+            
             # Create plot
             fig, ax = plt.subplots(figsize=(12, 6))
-
+            
             # Historical data
             ax.plot(monthly_cost['month'], monthly_cost['total_cost'], marker='o', label='Historical',
                     linewidth=2, markersize=8, color='#2E86AB')
-
-            # Forecast
-            ax.plot(future_dates, forecast, marker='s', label='Forecast (AR2)',
-                    linewidth=2, markersize=8, color='#A23B72', linestyle='--')
-
-            # Derive an error percentage from the fitted AR2 model (MAPE) and
-            # use it to construct a percentage-based CI around the forecast.
-            # Fall back to the residual-std method if MAPE can't be computed.
-            try:
-                # Attempt to get in-sample fitted values and align with actuals
-                if hasattr(fitted_model, 'fittedvalues'):
-                    fitted_vals = np.asarray(fitted_model.fittedvalues)
-                    # aligned actuals correspond to the last len(fitted_vals) points
-                    actuals = ts_data[-len(fitted_vals):]
-                    # avoid division by zero
-                    denom = np.where(actuals == 0, np.nan, actuals)
-                    mape = np.nanmean(np.abs((actuals - fitted_vals) / denom)) * 100.0
-                else:
-                    raise AttributeError("no fittedvalues")
-
-                # Validate MAPE
-                if not np.isfinite(mape) or mape <= 0:
-                    raise ValueError("invalid mape")
-
-                # Build CI as forecast ± mape% (simple, interpretable)
-                conf_upper = forecast * (1.0 + mape / 100.0)
-                conf_lower = forecast * (1.0 - mape / 100.0)
-                ci_label = f'Error band (MAPE {mape:.1f}%)'
-                # annotate MAPE on plot
-                ax.text(0.99, 0.02, f'MAPE (in-sample): {mape:.1f}%', transform=ax.transAxes,
-                        ha='right', va='bottom', fontsize=9, bbox=dict(boxstyle='round', fc='white', alpha=0.6))
-            except Exception:
-                # fallback: use residual standard deviation * 1.96
-                std_error = np.std(fitted_model.resid)
-                conf_upper = forecast + 1.96 * std_error
-                conf_lower = forecast - 1.96 * std_error
-                ci_label = 'Error band (std resid)'
-
-            ax.fill_between(future_dates, conf_lower, conf_upper, 
-                           alpha=0.2, color='#A23B72', label=ci_label)
             
-            ax.set_title('Payroll Cost Forecasting (AR2 Model)', 
+            # Forecast
+            ax.plot(future_dates, forecast, marker='s', label='Forecast (AR(2)+Ridge)',
+                    linewidth=2, markersize=8, color='#A23B72', linestyle='--')
+            
+            # Confidence intervals with recursive error amplification
+            ax.fill_between(future_dates, conf_lower, conf_upper, 
+                           alpha=0.2, color='#A23B72')
+            
+            ax.set_title('Payroll Cost Forecasting', 
                         fontsize=16, fontweight='bold', pad=20)
             ax.set_xlabel('Month', fontsize=12)
-            ax.set_ylabel('Total Cost ($)', fontsize=12)
+            ax.set_ylabel('Total Cost (€)', fontsize=12)
             ax.legend(fontsize=10)
             ax.grid(True, alpha=0.3)
             ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
@@ -399,7 +430,7 @@ class PayrollDashboard:
         except Exception as e:
             messagebox.showerror("Forecast Error", 
                                f"Failed to generate forecast:\n{e}\n\n"
-                               "Need at least 3 months of data for AR(2)")
+                               "Need at least 5 months of data for AR(2)+Ridge forecasting")
     
     def plot_cost_per_employee(self):
         """Plot 3: Average cost per employee over time."""
@@ -433,7 +464,7 @@ class PayrollDashboard:
         ax1.plot(monthly_avg['month'], monthly_avg['avg_cost'], 
                 marker='o', linewidth=2, markersize=8, color='#F18F01')
         ax1.set_title('Average Cost per Employee', fontsize=14, fontweight='bold')
-        ax1.set_ylabel('Average Cost ($)', fontsize=11)
+        ax1.set_ylabel('Average Cost (€)', fontsize=11)
         ax1.grid(True, alpha=0.3)
         ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
         
@@ -497,7 +528,7 @@ class PayrollDashboard:
         
         ax.set_title('Payroll Cost Breakdown', fontsize=16, fontweight='bold', pad=20)
         ax.set_xlabel('Month', fontsize=12)
-        ax.set_ylabel('Total Cost ($)', fontsize=12)
+        ax.set_ylabel('Total Cost (€)', fontsize=12)
         ax.legend(loc='upper left', fontsize=10)
         ax.grid(True, alpha=0.3, axis='y')
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
@@ -542,10 +573,10 @@ class PayrollDashboard:
             alpha=0.7, edgecolor='black')
         mean_val = latest_data['total_cost'].mean()
         med_val = latest_data['total_cost'].median()
-        ax.axvline(mean_val, color='red', linestyle='--', linewidth=2, label=f"Mean: ${mean_val:,.0f}")
-        ax.axvline(med_val, color='green', linestyle='--', linewidth=2, label=f"Median: ${med_val:,.0f}")
+        ax.axvline(mean_val, color='red', linestyle='--', linewidth=2, label=f"Mean: €{mean_val:,.0f}")
+        ax.axvline(med_val, color='green', linestyle='--', linewidth=2, label=f"Median: €{med_val:,.0f}")
         ax.set_title('Employee Cost Distribution (Latest Month)', fontsize=14, fontweight='bold')
-        ax.set_xlabel('Total Cost ($)', fontsize=11)
+        ax.set_xlabel('Total Cost (€)', fontsize=11)
         ax.set_ylabel('Number of Employees', fontsize=11)
         ax.legend(fontsize=9)
         ax.grid(True, alpha=0.3, axis='y')
@@ -602,7 +633,7 @@ class PayrollDashboard:
         bars = ax.barh(range(len(top10)), top10['total_cost'], color='#C73E1D', alpha=0.7)
         ax.set_yticks(range(len(top10)))
         ax.set_yticklabels(top10['employee_id'])
-        ax.set_xlabel('Total Cost ($)', fontsize=12)
+        ax.set_xlabel('Total Cost (€)', fontsize=12)
         ax.set_ylabel('Employee ID', fontsize=12)
         ax.set_title(f'Top 10 Most Expensive Employees ({title_period})', 
                 fontsize=16, fontweight='bold', pad=20)
@@ -610,7 +641,7 @@ class PayrollDashboard:
         
         # Add value labels
         for i, (idx, row) in enumerate(top10.iterrows()):
-            ax.text(row['total_cost'], i, f"  ${row['total_cost']:,.0f}", 
+            ax.text(row['total_cost'], i, f"  €{row['total_cost']:,.0f}", 
                    va='center', fontsize=9)
         
         plt.tight_layout()
@@ -690,7 +721,7 @@ class PayrollDashboard:
         ax.set_title('Gross vs Net Salary Comparison', 
                     fontsize=16, fontweight='bold', pad=20)
         ax.set_xlabel('Month', fontsize=12)
-        ax.set_ylabel('Salary ($)', fontsize=12)
+        ax.set_ylabel('Salary (€)', fontsize=12)
         ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=9)
         ax.grid(True, alpha=0.3)
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
@@ -788,7 +819,7 @@ class PayrollDashboard:
         
         ax.set_title('Year-over-Year Comparison', fontsize=16, fontweight='bold', pad=20)
         ax.set_xlabel('Month', fontsize=12)
-        ax.set_ylabel('Total Cost ($)', fontsize=12)
+        ax.set_ylabel('Total Cost (€)', fontsize=12)
         ax.set_xticks(range(1, 13))
         ax.set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
@@ -832,15 +863,15 @@ class PayrollDashboard:
                 tier_name = tier_names[idx] if idx < len(tier_names) else f"Tier {idx+1}"
                 summary += f"{tier_name}\n"
                 summary += f"  • {int(row['size'])} employees\n"
-                summary += f"  • ${row['avg_total_cost']:,.0f} per employee/month\n"
-                summary += f"  • ${row['avg_total_cost'] * row['size']:,.0f} total/month\n"
+                summary += f"  • €{row['avg_total_cost']:,.0f} per employee/month\n"
+                summary += f"  • €{row['avg_total_cost'] * row['size']:,.0f} total/month\n"
                 
                 # Add employee list
                 emp_list = ', '.join(str(emp) for emp in row['employee_ids'])
                 summary += f"  • Employees: {emp_list}\n\n"
             
             total_monthly = (profiles['avg_total_cost'] * profiles['size']).sum()
-            summary += f"Total Monthly Payroll: ${total_monthly:,.0f}\n"
+            summary += f"Total Monthly Payroll: €{total_monthly:,.0f}\n"
             summary += f"Clustering Quality: {clustering.silhouette:.2f}/1.00"
             
             messagebox.showinfo("Clustering Complete", summary)

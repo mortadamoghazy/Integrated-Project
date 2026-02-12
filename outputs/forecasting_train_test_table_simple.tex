@@ -1,0 +1,20 @@
+\begin{table}[htbp]
+\centering
+\caption{Forecasting Evaluation: Train/Test Split Only (NRMSE)}
+\label{tab:forecasting_train_test_simple}
+\begin{tabular}{@{} l ccc @{}}
+\toprule
+\textbf{Model} & \textbf{Train/Test} & \textbf{Recursive Multi-Step} & \textbf{Time Series CV} \\
+\midrule
+Ridge & \textbf{0.0508} & \textbf{0.0677} & 0.0566 \\
+Lasso & 0.0611 & 0.0695 & 0.0612 \\
+AR(2) & 0.0534 & 0.0718 & 0.0832 \\
+AR(1) & 0.0616 & 0.0750 & \textbf{0.0498} \\
+Unpooled & 0.0836 & 0.0836 & -- \\
+Pooled FE & 0.0857 & 0.0857 & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{0.5cm}
+\noindent \textbf{Note:} Train/test split only with CV-based hyperparameter selection. Bold values indicate best performance in each method.
